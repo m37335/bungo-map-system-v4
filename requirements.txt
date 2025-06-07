@@ -1,0 +1,35 @@
+# 文豪地図システム v3.0 - Python 3.12対応版
+# 最新版依存関係
+
+# === Core Dependencies ===
+pandas>=2.2.0
+numpy>=1.26.0
+
+# === NLP & Text Processing ===
+spacy>=3.7.2
+ja-ginza>=5.1.0
+mecab-python3>=1.0.6
+
+# === Web scraping ===
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# === Geocoding ===
+geopy>=2.4.0
+googlemaps>=4.10.0
+
+# === Database ===
+sqlalchemy>=2.0.0
+
+# === Data Export & Processing ===
+openpyxl>=3.1.0
+
+# === Utilities ===
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+tqdm>=4.66.0
+rich>=13.0.0
+
+# === Development & Testing ===
+pytest>=7.4.0 

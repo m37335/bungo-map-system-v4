@@ -1,0 +1,69 @@
+# 🌟 文豪地図システム v3.0 - 最新版
+# Docker Compose 設定ファイル
+
+services:
+  # メイン開発コンテナ
+  bungo-dev:
+    build: .
+    container_name: bungo-map-v3-dev
+    volumes:
+      - .:/app
+      - bungo_cache:/app/cache
+      # Git設定の共有
+      - ~/.gitconfig:/home/developer/.gitconfig:ro
+    ports:
+      - "8088:8080"  # 開発サーバー
+      - "3001:3000"  # フロントエンド開発サーバー
+    environment:
+      - BUNGO_ENV=development
+      - BUNGO_DEBUG=true
+      - BUNGO_LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+    working_dir: /app
+    tty: true
+    stdin_open: true
+    command: /bin/bash
+    networks:
+      - bungo-network
+
+  # PostgreSQL データベース（オプション）
+  postgres:
+    image: postgres:16-alpine
+    container_name: bungo-postgres-v3
+    environment:
+      POSTGRES_DB: bungo_map_db
+      POSTGRES_USER: bungo
+      POSTGRES_PASSWORD: bungo123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # ローカルPostgreSQLとの競合避け
+    networks:
+      - bungo-network
+    profiles:
+      - postgres
+
+  # Redis キャッシュ（オプション）
+  redis:
+    image: redis:7-alpine
+    container_name: bungo-redis-v3
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"  # ローカルRedisとの競合避け
+    networks:
+      - bungo-network
+    profiles:
+      - redis
+
+# データ永続化ボリューム
+volumes:
+  postgres_data:
+  redis_data:
+  bungo_cache:
+
+# カスタムネットワーク
+networks:
+  bungo-network:
+    driver: bridge

@@ -1,0 +1,14 @@
+{
+  "export_time": "2025-06-07T17:02:51.283502",
+  "environment": "Docker Python 3.12",
+  "database_path": "/app/data/bungo_production.db",
+  "statistics": {
+    "authors": 1,
+    "works": 1,
+    "places": 1,
+    "geo_places": 0
+  },
+  "top_places": {
+    "松山": 1
+  }
+}
