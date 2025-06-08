@@ -48,10 +48,14 @@ ENV/
 .coverage
 htmlcov/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Database (commented out to include data files)
+# *.db
+# *.sqlite
+# *.sqlite3
+
+# Database backups (exclude backup files)
+*backup*.db
+*_backup_*.db
 
 # Logs
 *.log

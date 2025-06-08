@@ -45,12 +45,25 @@ class Database:
                 title TEXT NOT NULL,
                 wiki_url TEXT,
                 aozora_url TEXT,
+                text_url TEXT,
                 content TEXT,
+                publication_year INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (author_id) REFERENCES authors (author_id),
                 UNIQUE(author_id, title)
             )
             """)
+            
+            # 既存テーブルにカラムを追加（エラーを無視）
+            try:
+                conn.execute("ALTER TABLE works ADD COLUMN text_url TEXT")
+            except sqlite3.OperationalError:
+                pass  # カラムが既に存在する場合
+            
+            try:
+                conn.execute("ALTER TABLE works ADD COLUMN publication_year INTEGER")
+            except sqlite3.OperationalError:
+                pass  # カラムが既に存在する場合
             
             # places テーブル
             conn.execute("""
@@ -102,19 +115,27 @@ class Database:
             return result[0] if result else None
     
     def insert_work(self, work: Work) -> int:
-        """作品挿入"""
+        """作品挿入（制作年代対応）"""
         with self.get_connection() as conn:
             cursor = conn.execute(
-                """INSERT OR IGNORE INTO works (author_id, title, wiki_url, aozora_url, content)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (work.author_id, work.title, work.wiki_url, work.aozora_url, work.content)
+                """INSERT OR IGNORE INTO works (author_id, title, wiki_url, aozora_url, content, publication_year)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (work.author_id, work.title, work.wiki_url, work.aozora_url, work.content, work.publication_year)
             )
             conn.commit()
             
             if cursor.lastrowid:
                 return cursor.lastrowid
             
-            # 既存作品のIDを取得
+            # 既存作品のIDを取得（制作年代も更新）
+            if work.publication_year:
+                conn.execute(
+                    """UPDATE works SET publication_year = ? 
+                       WHERE author_id = ? AND title = ? AND publication_year IS NULL""",
+                    (work.publication_year, work.author_id, work.title)
+                )
+                conn.commit()
+            
             cursor = conn.execute(
                 "SELECT work_id FROM works WHERE author_id = ? AND title = ?", 
                 (work.author_id, work.title)
@@ -147,12 +168,22 @@ class Database:
             return None
     
     def get_stats(self) -> Dict[str, int]:
-        """データベース統計情報"""
+        """データベース統計情報（青空文庫対応）"""
         with self.get_connection() as conn:
             stats = {}
+            
+            # 基本統計
             for table in ['authors', 'works', 'places']:
                 cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[table] = cursor.fetchone()[0]
+            
+            # 青空文庫関連統計
+            cursor = conn.execute("SELECT COUNT(*) FROM works WHERE aozora_url IS NOT NULL OR wiki_url IS NOT NULL")
+            stats['works_with_url'] = cursor.fetchone()[0]
+            
+            cursor = conn.execute("SELECT COUNT(*) FROM works WHERE content IS NOT NULL")
+            stats['works_with_content'] = cursor.fetchone()[0]
+            
             return stats
     
     def get_place_count(self) -> int:
@@ -201,6 +232,74 @@ class Database:
                 places.append(place)
         
         return places
+    
+    def add_author(self, name: str, birth_year: int = None, death_year: int = None, 
+                   wikipedia_url: str = None) -> int:
+        """作者を追加または取得（青空文庫対応）"""
+        with self.get_connection() as conn:
+            # 既存作者をチェック
+            cursor = conn.execute("SELECT author_id FROM authors WHERE name = ?", (name,))
+            result = cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+            # 新規作者を追加
+            cursor = conn.execute(
+                """INSERT INTO authors (name, birth_year, death_year, wikipedia_url)
+                   VALUES (?, ?, ?, ?)""",
+                (name, birth_year, death_year, wikipedia_url)
+            )
+            conn.commit()
+            return cursor.lastrowid
+    
+    def add_work(self, title: str, author_id: int, publication_year: int = None,
+                 wiki_url: str = None, aozora_url: str = None, text_url: str = None) -> int:
+        """作品を追加または取得（青空文庫対応）"""
+        with self.get_connection() as conn:
+            # 既存作品をチェック
+            cursor = conn.execute(
+                "SELECT work_id FROM works WHERE author_id = ? AND title = ?", 
+                (author_id, title)
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                # 既存作品のURL情報を更新
+                update_sql = """
+                UPDATE works SET 
+                    publication_year = COALESCE(?, publication_year),
+                    wiki_url = COALESCE(?, wiki_url),
+                    aozora_url = COALESCE(?, aozora_url),
+                    text_url = COALESCE(?, text_url)
+                WHERE work_id = ?
+                """
+                conn.execute(update_sql, (publication_year, wiki_url, aozora_url, text_url, result[0]))
+                conn.commit()
+                return result[0]
+            
+            # 新規作品を追加
+            cursor = conn.execute(
+                """INSERT INTO works (title, author_id, publication_year, wiki_url, aozora_url, text_url)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (title, author_id, publication_year, wiki_url, aozora_url, text_url)
+            )
+            conn.commit()
+            return cursor.lastrowid
+    
+    def set_work_content(self, work_id: int, content: str) -> bool:
+        """作品のテキストコンテンツを設定"""
+        try:
+            with self.get_connection() as conn:
+                conn.execute(
+                    "UPDATE works SET content = ? WHERE work_id = ?",
+                    (content, work_id)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"コンテンツ設定エラー: {e}")
+            return False
     
     def update_place(self, place: Place) -> bool:
         """地名情報を更新"""

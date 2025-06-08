@@ -10,10 +10,11 @@ spacy>=3.7.2
 ja-ginza>=5.1.0
 mecab-python3>=1.0.6
 
-# === Web scraping ===
+# === Web scraping & Wikipedia ===
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
+wikipedia>=1.4.0
 
 # === Geocoding ===
 geopy>=2.4.0
@@ -30,6 +31,11 @@ python-dotenv>=1.0.0
 pyyaml>=6.0.0
 tqdm>=4.66.0
 rich>=13.0.0
+
+# === CLI & Async ===
+click>=8.1.0
+aiohttp>=3.9.0
+asyncio
 
 # === Development & Testing ===
 pytest>=7.4.0 

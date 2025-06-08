@@ -1,397 +1,300 @@
 # 🌟 文豪ゆかり地図システム v3.0
 
-> **自動ジオコーディング統合版** - 日本文学作品から地名を抽出し、自動座標付与で地図化するシステム
+青空文庫と Wikipedia から文豪作品の地名情報を自動抽出し、地図上で可視化する統合システム
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
-[![Geocoding](https://img.shields.io/badge/座標カバー率-62.9%25-brightgreen.svg)](https://github.com)
-[![Places](https://img.shields.io/badge/地名数-1,612件-blue.svg)](https://github.com)
+![Python](https://img.shields.io/badge/python-v3.12+-blue.svg)
+![GitHub](https://img.shields.io/badge/license-MIT-green.svg)
 
-## 🚀 v3.0重要アップデート: 自動ジオコーディング統合！
+## 🌟 主要機能
 
-**完全自動化達成**: 地名抽出 → 自動座標付与 → 地図データ生成までワンコマンド実行
+### データ収集・構築
+- **青空文庫データベース構築**: 公式CSVファイルからの大規模データベース構築
+- **Wikipedia連携**: 作家・作品情報の自動抽出
+- **手動データ追加**: カスタム作者・作品・地名の登録機能
+- **高精度地名抽出**: GiNZA NLP / MeCab による日本語地名認識
+- **座標自動取得**: Google Maps API による緯度経度データ取得
 
-| 指標 | アップデート前 | アップデート後 | 改善効果 |
-|------|---------------|---------------|----------|
-| **🗺️ 座標カバー率** | 57.6% | **62.9%** | **+5.3pt** |
-| **📍 総地名数** | 1,300件 | **1,612件** | **+312件** |
-| **🎯 座標付き地名** | 660件 | **1,014件** | **+354件** |
-| **⚡ 処理フロー** | 手動2段階 | **完全自動化** | **ワンコマンド** |
-| **🧠 座標データベース** | 212地名 | **200+地名** | **文学特化** |
+### 検索・分析
+- **3階層検索**: 作家 ↔ 作品 ↔ 地名の双方向検索
+- **地理的分析**: 作品別・作家別の舞台地分布
+- **時代別分析**: 出版年代による地名トレンド
 
-## 📋 概要
-
-文豪ゆかり地図システムは、青空文庫の文学作品から地名を自動抽出し、インテリジェントジオコーディングで座標を付与、地理的データとして管理・可視化するシステムです。
-
-**✨ v3.0 の主要改善点**:
-- 🔗 **統合パイプライン**: 地名抽出 + 自動ジオコーディング + 統計レポート
-- 📊 **拡張座標データベース**: 200+地名の日本地理データ内蔵
-- 🧠 **スマートマッチング**: 完全一致 + 部分一致による座標付与
-- 📈 **リアルタイム進捗**: 各地名の座標更新をリアルタイム表示
-- 🗺️ **高カバー率**: 62.9%の地名に座標付与完了
-
-### 📈 実行結果
-
-**🟢 統合システム（最新実行結果）**:
-```bash
-🚀 文豪ゆかり地図システム - 完全データ拡充開始
-📊 座標データベース: 200+件の地名を準備
-��️ 4. 自動ジオコーディング実行
-✅ 東京: 座標更新 (35.6762, 139.6503)
-✅ 神田: 座標更新 (35.6914, 139.7706)
-✅ 新橋: 座標更新 (35.6668, 139.7587)
-✅ 鎌倉: 座標更新 (35.3192, 139.5469)
-✅ 箱根: 座標更新 (35.2322, 139.1069)
-✅ 江戸: 座標更新 (35.7041, 139.8681) [部分マッチ: 江戸川]
-
-📊 データベース最終状況:
-   📚 作者: 10件
-   📖 作品: 30件
-   🏞️ 地名: 1,612件
-   🗺️ 座標あり: 1,014件 (62.9%)
-   🎯 今回更新: 354件
-   ⏱️ 実行時間: 265.9秒
-```
-
-**作者別地名分布（座標付き）**:
-- **夏目漱石**: 502件 (76.1%) - 東京中心の明治期地名
-- **太宰治**: 143件 (21.7%) - 青森・東京の昭和期地名  
-- **芥川龍之介**: 8件 (1.2%) - 京都・東京の大正期地名
-- **宮沢賢治**: 7件 (1.1%) - 岩手・北海道の地名
+### データエクスポート
+- **GeoJSON**: 地図可視化対応形式
+- **CSV/Excel**: データ分析対応形式
+- **統計レポート**: システム利用状況
 
 ## 🚀 クイックスタート
 
-### 🐳 統合パイプライン（推奨）
+### 1. システムセットアップ
 
 ```bash
-# Docker環境起動
-docker-compose up -d
+# リポジトリクローン
+git clone https://github.com/yourusername/bungo_map.git
+cd bungo_map
 
-# 🚀 完全自動化パイプライン実行（地名抽出+ジオコーディング）
-docker-compose exec bungo-dev python run_full_extraction.py
-
-# 📊 最新GeoJSONエクスポート
-docker-compose exec bungo-dev python export_updated_geojson.py
-
-# 📈 データベース統計確認
-docker-compose exec bungo-dev sqlite3 data/bungo_production.db \
-  "SELECT COUNT(*) as total_places, 
-   SUM(CASE WHEN lat IS NOT NULL THEN 1 ELSE 0 END) as geocoded_places,
-   ROUND(100.0 * SUM(CASE WHEN lat IS NOT NULL THEN 1 ELSE 0 END) / COUNT(*), 1) as coverage_rate 
-   FROM places;"
-```
-
-### 🔧 個別実行（開発用）
-
-```bash
-# 環境セットアップ
+# 依存関係インストール
 pip install -r requirements.txt
-python -m spacy download ja_ginza
 
-# 地名抽出のみ実行
-python run_full_extraction.py
-
-# ジオコーディングのみ実行  
-python bulk_geocoding_update.py
-
-# GeoJSONエクスポート
-python export_updated_geojson.py
+# データベース初期化
+python main.py status
 ```
+
+### 2. 青空文庫データベース構築
+
+```bash
+# 主要5作家のデータベース構築（推奨）
+python main.py aozora build-database --authors "夏目漱石,芥川竜之介,太宰治,宮沢賢治,森鴎外" --limit 5
+
+# 特定作家のみ
+python main.py aozora build-database --authors "夏目漱石" --limit 10
+
+# テストモード（実際の登録なし）
+python main.py aozora build-database --authors "夏目漱石" --limit 3 --test
+```
+
+### 3. 座標データ取得
+
+```bash
+# 地名の座標を自動取得
+python main.py geocode --limit 50
+
+# 座標設定状況確認
+python main.py geocode --status
+```
+
+### 4. 手動データ追加
+
+```bash
+# 作者を手動追加
+python main.py add author --name "新作者" --birth-year 1900 --death-year 1980
+
+# 作品を手動追加  
+python main.py add work --title "新作品" --author-id 1 --publication-year 1950
+
+# 地名を手動追加
+python main.py add place --name "新地名" --latitude 35.6762 --longitude 139.6503
+
+# 対話式追加モード
+python main.py add author --interactive
+
+# 追加テンプレート表示
+python main.py add template
+```
+
+### 5. データ検索・分析
+
+```bash
+# 作家検索
+python main.py search authors "夏目"
+
+# 作品検索
+python main.py search works "坊っちゃん"
+
+# 地名検索
+python main.py search places "松山"
+```
+
+### 6. データエクスポート
+
+```bash
+# GeoJSONエクスポート（地図可視化用）
+python main.py export --format geojson -o bungo_map.geojson
+
+# CSVエクスポート（データ分析用）
+python main.py export --format csv -o bungo_data.csv
+```
+
+## 📊 統計情報
+
+現在のシステム統計（2025年6月時点）：
+
+```bash
+python main.py aozora stats
+```
+
+- **作家数**: 21名（主要文豪）
+- **作品数**: 178作品
+- **地名数**: 1,924箇所
+- **URL設定率**: 92.7%
+- **コンテンツ設定率**: 83.7%
 
 ## 🏗️ システム構成
 
-### 🆕 統合データフロー
+### コアモジュール
 ```
-青空文庫テキスト → 地名抽出 → 自動ジオコーディング → データベース → GeoJSON
-     (30作品)      ↓           ↓              ↓          ↓
-               GiNZA + 正規表現  200+地名DB    SQLite    地図可視化
-               (1,612地名)     (62.9%成功)   (3階層)   (MapKit対応)
-```
-
-### ディレクトリ構成
-```
-bungo_project_v3/
-├── bungo_map/                    # メインパッケージ
-│   ├── core/                     # データベース・モデル
-│   │   ├── database.py           # 🆕 ジオコーディング対応DB
-│   │   └── models.py             
-│   ├── extractors/               # 地名抽出エンジン
-│   │   ├── ginza_place_extractor.py
-│   │   ├── simple_place_extractor.py
-│   │   └── aozora_extractor.py
-│   └── utils/                    # ユーティリティ
-├── run_full_extraction.py        # 🆕 統合パイプライン（地名抽出+ジオコーディング）
-├── bulk_geocoding_update.py      # 従来のジオコーディング（比較用）
-├── export_updated_geojson.py     # GeoJSONエクスポート
-├── data/                         # データベース
-│   └── bungo_production.db       # SQLite（1,612地名・1,014座標）
-└── output/                       # 出力ファイル
-    └── bungo_map_updated_*.geojson
+bungo_map/
+├── core/           # データベース・モデル
+├── extractors/     # 地名抽出エンジン
+├── geo/           # 地理情報処理
+├── cli/           # コマンドライン管理
+├── utils/         # ユーティリティ
+└── api/           # REST API（予定）
 ```
 
-## 🔧 主要機能
+### 主要コマンド
 
-### 🆕 統合ジオコーディングエンジン
+| コマンド | 機能 | 例 |
+|---------|------|----| 
+| `main.py aozora` | 青空文庫データベース構築 | `build-database`, `download-csv`, `stats` |
+| `main.py add` | 手動データ追加 | `author`, `work`, `place`, `template` |
+| `main.py search` | データ検索 | `authors`, `works`, `places` |
+| `main.py geocode` | 座標データ取得 | `--all`, `--limit 50`, `--status` |
+| `main.py export` | データエクスポート | `--format geojson`, `--format csv` |
+| `main.py collect` | 従来データ収集 | `--author "夏目漱石"`, `--demo` |
 
-**内蔵座標データベース（200+地名）**
-```python
-coordinates_db = {
-    # 歴史的・古典地名
-    "武蔵": (35.6762, 139.6503),    # 東京
-    "相模": (35.3392, 139.3949),    # 神奈川
-    "甲斐": (35.6642, 138.5684),    # 山梨
-    "越後": (37.9022, 139.0237),    # 新潟
-    "山城": (35.0116, 135.7681),    # 京都
-    "薩摩": (31.5966, 130.5571),    # 鹿児島
-    
-    # 東京詳細地名
-    "神田": (35.6914, 139.7706),
-    "銀座": (35.6762, 139.7653),
-    "新橋": (35.6668, 139.7587),
-    "浅草": (35.7148, 139.7967),
-    "上野": (35.7090, 139.7753),
-    "本郷": (35.7090, 139.7619),
-    
-    # 文学ゆかり地
-    "鎌倉": (35.3192, 139.5469),
-    "箱根": (35.2322, 139.1069),
-    "軽井沢": (36.3427, 138.6297),
-    "日光": (36.7581, 139.6206),
-    # ... 200+地名
-}
-```
+## 🛠️ 技術スタック
 
-**スマートマッチングアルゴリズム**
-1. **完全一致**: `東京` → 直接座標取得
-2. **部分マッチ**: `東京市` → `東京`の座標使用
-3. **成功ログ**: `✅ 東京市: 座標更新 (35.6762, 139.6503) [部分マッチ: 東京]`
+### データ処理
+- **Python 3.12+**: メイン開発言語
+- **SQLite**: 軽量データベース
+- **pandas**: データ分析・処理
+- **aiohttp**: 非同期HTTP通信
 
-### 地名抽出エンジン
+### NLP・地名抽出
+- **GiNZA**: 高精度日本語自然言語処理
+- **spaCy**: NLPフレームワーク
+- **MeCab**: 形態素解析（補助）
 
-**GiNZA NLP抽出器**
-- 文脈理解による高精度抽出（信頼度0.75-0.95）
-- 固有表現認識 (LOC/GPE)
-- 30KB自動分割処理
+### Web・API
+- **requests**: HTTP通信
+- **BeautifulSoup4**: HTMLパース
+- **googlemaps**: 座標取得API
 
-**正規表現抽出器（3種類）**
-- **regex_都道府県**: 47都道府県パターン（信頼度0.70）
-- **regex_市区町村**: 市区町村パターン（信頼度0.90）
-- **regex_有名地名**: 観光地・歴史地名（信頼度0.65）
+### CLI・UI
+- **Click**: コマンドライン管理
+- **Rich**: 高機能コンソール出力
+- **tqdm**: プログレスバー
 
-### データベース設計
+## 💡 使用例
 
-```sql
--- 3階層正規化設計（拡張版）
-authors (作者) 1 ← N works (作品) 1 ← N places (地名)
+### 1. 青空文庫大規模データベース構築
 
--- 拡張placesテーブル
-CREATE TABLE places (
-    place_id INTEGER PRIMARY KEY,
-    work_id INTEGER REFERENCES works(work_id),
-    place_name TEXT NOT NULL,
-    lat REAL, lng REAL,             -- 🆕 座標情報
-    before_text TEXT,               -- 前文脈
-    sentence TEXT,                  -- 該当文
-    after_text TEXT,                -- 後文脈
-    confidence REAL,                -- 信頼度 (0.0-1.0)
-    extraction_method TEXT,         -- 抽出方法
-    aozora_url TEXT,               -- 青空文庫URL
-    created_at TIMESTAMP
-);
-```
-
-## 📊 統合ジオコーディング結果
-
-### 🟢 成功例（座標付与完了）
-```
-✅ 東京: 座標更新 (35.6762, 139.6503)
-✅ 神田: 座標更新 (35.6914, 139.7706)
-✅ 新橋: 座標更新 (35.6668, 139.7587)
-✅ 鎌倉: 座標更新 (35.3192, 139.5469)
-✅ 箱根: 座標更新 (35.2322, 139.1069)
-✅ 江戸: 座標更新 (35.7041, 139.8681) [部分マッチ: 江戸川]
-✅ 甲斐: 座標更新 (35.6642, 138.5684)
-✅ 薩摩: 座標更新 (31.5966, 130.5571)
-✅ 京都: 座標更新 (35.0116, 135.7681)
-✅ 大阪: 座標更新 (34.6937, 135.5023)
-✅ 広島: 座標更新 (34.3853, 132.4553)
-✅ 名古屋: 座標更新 (35.1815, 136.9066)
-✅ 日光: 座標更新 (36.7581, 139.6206)
-✅ 軽井沢: 座標更新 (36.3427, 138.6297)
-✅ 松山: 座標更新 (33.8416, 132.7658)
-```
-
-### 🔍 未対応例（今後の拡張対象）
-```
-🔍 小石川: 座標不明 → 今後追加予定
-🔍 四日市: 座標不明 → 三重県四日市市
-🔍 豊橋: 座標不明 → 愛知県豊橋市
-🔍 浜松: 座標不明 → 静岡県浜松市
-🔍 金沢: 座標不明 → 石川県金沢市
-```
-
-### 📈 抽出方法別統計
-| 抽出方法 | 件数 | 割合 | 座標成功率 |
-|---------|------|------|-----------|
-| **regex_有名地名** | 396件 | 60.0% | **高** |
-| **ginza_nlp** | 205件 | 31.1% | **中** |
-| **regex_市区町村** | 41件 | 6.2% | **高** |
-| **regex_都道府県** | 13件 | 2.0% | **最高** |
-
-## 🎯 GeoJSONエクスポート
-
-### 📁 出力ファイル
-- **ファイル名**: `bungo_map_updated_YYYYMMDD_HHMMSS.geojson`
-- **ファイルサイズ**: 632.8KB
-- **対応フォーマット**: MapKit, Leaflet, Google Maps対応
-
-### 📊 GeoJSON統計情報
-```json
-{
-  "type": "FeatureCollection",
-  "metadata": {
-    "total_places": 1612,
-    "geocoded_places": 1014,
-    "coverage_rate": 62.9,
-    "authors": {
-      "夏目漱石": 502,
-      "太宰治": 143, 
-      "芥川龍之介": 8,
-      "宮沢賢治": 7
-    },
-    "extraction_methods": {
-      "regex_有名地名": 396,
-      "ginza_nlp": 205,
-      "regex_市区町村": 41,
-      "regex_都道府県": 13
-    }
-  },
-  "features": [ ... ]
-}
-```
-
-## 🛠️ コマンドリファレンス
-
-### データ拡充
 ```bash
-# 完全自動化パイプライン
-docker-compose exec bungo-dev python run_full_extraction.py
+# 主要10作家の全作品（フィルタ適用）
+python main.py aozora build-database \
+  --authors "夏目漱石,芥川竜之介,太宰治,宮沢賢治,森鴎外,中島敦,梶井基次郎,坂口安吾,与謝野晶子,中原中也"
 
-# 地名抽出のみ（ジオコーディングなし）
-docker-compose exec bungo-dev python -c "
-from bungo_map.extractors.aozora_extractor import AozoraExtractor
-extractor = AozoraExtractor()
-extractor.run_extraction()
-"
-
-# ジオコーディングのみ
-docker-compose exec bungo-dev python bulk_geocoding_update.py
+# 実行結果例：
+# ✅ 91作品追加
+# 📊 URL設定率: 90.4%
+# 📊 コンテンツ設定率: 83.7%
 ```
 
-### データ確認・統計
+### 2. 地名データ分析
+
 ```bash
-# データベース統計
-docker-compose exec bungo-dev sqlite3 data/bungo_production.db "
-SELECT 
-  COUNT(*) as total_places,
-  SUM(CASE WHEN lat IS NOT NULL THEN 1 ELSE 0 END) as geocoded,
-  ROUND(100.0 * SUM(CASE WHEN lat IS NOT NULL THEN 1 ELSE 0 END) / COUNT(*), 1) as rate
-FROM places;
-"
+# 松山市関連の地名検索
+python main.py search places "松山"
 
-# 作者別統計
-docker-compose exec bungo-dev sqlite3 data/bungo_production.db "
-SELECT a.name, COUNT(p.place_id) as places, 
-       SUM(CASE WHEN p.lat IS NOT NULL THEN 1 ELSE 0 END) as geocoded
-FROM authors a 
-JOIN works w ON a.author_id = w.author_id 
-JOIN places p ON w.work_id = p.work_id 
-GROUP BY a.name ORDER BY places DESC;
-"
-
-# 抽出方法別統計
-docker-compose exec bungo-dev sqlite3 data/bungo_production.db "
-SELECT extraction_method, COUNT(*) as count,
-       SUM(CASE WHEN lat IS NOT NULL THEN 1 ELSE 0 END) as geocoded
-FROM places 
-GROUP BY extraction_method ORDER BY count DESC;
-"
+# 坊っちゃん関連作品の舞台地
+python main.py search works "坊っちゃん"
 ```
 
-### データエクスポート
+### 3. 地図可視化用データ生成
+
 ```bash
-# GeoJSONエクスポート
-docker-compose exec bungo-dev python export_updated_geojson.py
+# 座標付き地名をGeoJSONエクスポート
+python main.py geocode --limit 100
+python main.py export --format geojson -o literary_map.geojson
 
-# CSVエクスポート（座標付きのみ）
-docker-compose exec bungo-dev sqlite3 -header -csv data/bungo_production.db "
-SELECT p.place_name, p.lat, p.lng, p.confidence, p.extraction_method,
-       w.title, a.name as author
-FROM places p
-JOIN works w ON p.work_id = w.work_id  
-JOIN authors a ON w.author_id = a.author_id
-WHERE p.lat IS NOT NULL
-ORDER BY a.name, w.title, p.place_name;
-" > output/bungo_places_geocoded.csv
+# Webマップで可視化可能
 ```
 
-## 📋 システム要件
+### 4. 手動データ追加の活用例
 
-### 必須要件
-- **Python**: 3.10+ 
-- **Docker**: 20.0+（推奨）
-- **メモリ**: 4GB+
-- **ストレージ**: 2GB+
+```bash
+# 青空文庫にない作者を追加
+python main.py add author --name "田中太郎" --birth-year 1925 --death-year 1990 \
+  --wikipedia-url "https://ja.wikipedia.org/wiki/田中太郎"
 
-### Python依存関係
-```txt
-pandas>=1.5.0
-spacy>=3.7.0
-ja-ginza>=5.1.0
-requests>=2.28.0
-beautifulsoup4>=4.11.0
-sqlite3 (標準ライブラリ)
+# 個人創作作品を追加
+python main.py add work --title "新しい物語" --author-id 197 \
+  --publication-year 1960 --url "https://example.com/story.txt"
+
+# 特定の地名を詳細情報付きで追加
+python main.py add place --name "架空の街" --latitude 35.6762 --longitude 139.6503 \
+  --work-id 403 --context "物語の舞台となる街" --confidence 0.9
+
+# 対話式で詳細入力
+python main.py add author --interactive
 ```
 
-## 🚀 今後の拡張計画
+## 📈 パフォーマンス
 
-### Phase 1: データ拡充（座標カバー率向上）
-- [ ] 座標データベース拡張（500地名目標）
-- [ ] 小地名・町名の詳細対応
-- [ ] 地方都市・観光地の網羅
-- [ ] **目標**: 座標カバー率 62.9% → 80%
+### 青空文庫データベース構築
+- **処理時間**: 153.1秒（91作品）
+- **成功率**: 83.7%（コンテンツ取得）
+- **メモリ使用量**: < 500MB
 
-### Phase 2: 高度ジオコーディング
-- [ ] Google Maps API統合
-- [ ] 歴史的地名の時代対応
-- [ ] 曖昧地名の文脈解析
-- [ ] **目標**: 座標カバー率 80% → 90%
+### 地名抽出
+- **GiNZA**: 高精度、やや低速
+- **MeCab**: 高速、中精度
+- **辞書ベース**: 最高速、基本精度
 
-### Phase 3: 可視化・分析機能
-- [ ] インタラクティブ地図
-- [ ] 時代別地名分布分析
-- [ ] 作者別文学地理の比較
-- [ ] **目標**: 研究支援ツール化
+## 🎯 データ追加方法
 
-### Phase 4: 大規模拡張
-- [ ] 青空文庫全作品対応（19,356作品）
-- [ ] 現代文学作品への拡張
-- [ ] 多言語対応（英語・中国語）
-- [ ] **目標**: 文学地理学研究プラットフォーム
+システムでは3つの方法でデータを追加できます：
 
-## 📞 サポート・コントリビューション
-
-### バグ報告・機能要求
-GitHubのIssuesページからご報告ください。
-
-### 座標データの改善提案
-地名の座標データに改善提案がある場合、以下の形式でPull Requestをお送りください：
-
-```python
-# bungo_map/geo/geocoding_engine.py への追加例
-"新地名": (緯度, 経度),  # 都道府県・詳細情報
+### 1. 青空文庫自動追加（推奨）
+```bash
+# 公式データベースから自動構築
+python main.py aozora build-database --authors "中原中也"
 ```
+- **メリット**: 大量データ、高品質、全自動
+- **対象**: 青空文庫収録作品（19,356作品）
+
+### 2. 手動データ追加
+```bash
+# カスタムデータを個別追加
+python main.py add author --name "新作者"
+python main.py add work --title "新作品" --author-id 1
+```
+- **メリット**: 完全カスタマイズ、青空文庫外対応
+- **対象**: 現代作家、個人創作、研究資料
+
+### 3. 従来システム（レガシー）
+```bash
+# Wikipedia連携の従来機能
+python main.py collect --author "夏目漱石" --demo
+```
+- **メリット**: Wikipedia情報活用
+- **対象**: 既存データ拡充
+
+## 🎯 今後の展開
+
+### v3.1 予定機能
+- [ ] FastAPI REST APIサーバー
+- [ ] React.js Webフロントエンド
+- [ ] リアルタイム地図可視化
+- [ ] 機械学習による地名分類
+- [ ] 一括インポート機能（CSV/JSON）
+
+### v4.0 構想
+- [ ] 明治～現代文学への対象拡大
+- [ ] 海外文学の日本舞台作品対応
+- [ ] 時系列地名変化トラッキング
+- [ ] 観光連携API
+
+## 🤝 貢献
+
+プルリクエスト歓迎！以下の分野で貢献可能：
+
+- **データ品質向上**: 地名抽出精度改善
+- **機能追加**: 新しい分析機能
+- **パフォーマンス**: 処理速度最適化
+- **ドキュメント**: 使用例・チュートリアル
+
+## 📄 ライセンス
+
+MIT License - 詳細は [LICENSE](LICENSE) を参照
+
+## 🙏 謝辞
+
+- **青空文庫**: 貴重な文学テキスト提供
+- **国語研・GiNZA**: 高品質日本語NLP
+- **Wikipedia**: 包括的作家・作品情報
 
 ---
 
-**🌟 文豪ゆかり地図システム v3.0** - 日本文学の地理的探求を支援する統合システム
+**文豪ゆかり地図システム**: 日本文学の地理的世界を探索する統合プラットフォーム

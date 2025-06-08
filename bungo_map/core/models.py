@@ -30,6 +30,7 @@ class Work:
     wiki_url: Optional[str] = None
     aozora_url: Optional[str] = None
     content: Optional[str] = None
+    publication_year: Optional[int] = None
     created_at: Optional[datetime] = None
 
 

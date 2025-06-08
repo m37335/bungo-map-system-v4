@@ -57,11 +57,15 @@ def collect(author: str, limit: int, demo: bool, ginza: bool):
         click.echo("  --demo --ginza              # デモ + GiNZA")
 
 
-# 検索機能は search.py から import
+# 機能モジュールをインポート
 from .search import search
+from .aozora import aozora
+from .add import add
 
-# 検索機能をメインCLIに追加
+# 機能をメインCLIに追加
 main.add_command(search)
+main.add_command(aozora)
+main.add_command(add)
 
 
 @main.command()

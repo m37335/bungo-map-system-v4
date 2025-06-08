@@ -1,0 +1,148 @@
+{
+    "name": "🌟 文豪ゆかり地図システム v3.0 開発環境",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "bungo-dev",
+    "workspaceFolder": "/app",
+    
+    // VS Code拡張機能とカスタマイズ
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Python開発環境
+                "ms-python.python",
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff",
+                
+                // データ分析・可視化
+                "ms-toolsai.jupyter",
+                "sqlite.sqlite-viewer",
+                "mechatroner.rainbow-csv",
+                "RandomFractalsInc.geo-data-viewer",
+                
+                // 開発支援
+                "ms-vscode.vscode-json",
+                "redhat.vscode-yaml",
+                "formulahendry.code-runner",
+                "github.copilot",
+                
+                // Docker・Git
+                "ms-azuretools.vscode-docker",
+                "github.vscode-pull-request-github",
+                "eamodio.gitlens"
+            ],
+            
+            "settings": {
+                // Python設定
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.flake8Enabled": true,
+                "python.formatting.provider": "black",
+                "python.formatting.blackArgs": ["--line-length=88"],
+                
+                // エディタ設定
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": true
+                },
+                "editor.rulers": [88],
+                "editor.tabSize": 4,
+                
+                // ターミナル設定
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.cwd": "/app",
+                
+                // ファイル関連設定
+                "files.exclude": {
+                    "**/__pycache__": true,
+                    "**/.pytest_cache": true,
+                    "**/.mypy_cache": true,
+                    "**/*.pyc": true
+                },
+                "files.associations": {
+                    "*.geojson": "json",
+                    "bungo_production.db": "sqlite"
+                },
+                
+                // SQLite設定
+                "sqlite.sqlite3": "/usr/bin/sqlite3",
+                
+                // JSON設定（GeoJSON表示用）
+                "json.maxItemsComputed": 15000
+            }
+        }
+    },
+    
+    // ポート転送設定
+    "forwardPorts": [8088, 3001, 5433, 6380],
+    "portsAttributes": {
+        "8088": {
+            "label": "🚀 文豪地図API サーバー",
+            "onAutoForward": "notify"
+        },
+        "3001": {
+            "label": "📊 フロントエンド開発サーバー",
+            "onAutoForward": "silent"
+        },
+        "5433": {
+            "label": "🐘 PostgreSQL (v3)",
+            "onAutoForward": "silent"
+        },
+        "6380": {
+            "label": "📦 Redis Cache (v3)",
+            "onAutoForward": "silent"
+        }
+    },
+    
+    // ライフサイクルコマンド
+    "initializeCommand": "echo '🚀 文豪地図システム v3.0 Dev Container初期化開始...'",
+    "onCreateCommand": "echo '📦 Dev Container作成中...'",
+    "postCreateCommand": [
+        "bash", "-c", 
+        "pip install -e . && python -m spacy download ja_ginza && echo '🎉 文豪地図システム v3.0 開発環境の初期化完了！'"
+    ],
+    "postStartCommand": [
+        "bash", "-c",
+        "echo '🌟 文豪ゆかり地図システム v3.0 開発環境が起動しました！' && echo '📊 利用可能なコマンド:' && echo '  python run_full_extraction.py      - 統合パイプライン実行' && echo '  python export_updated_geojson.py   - GeoJSONエクスポート' && echo '  sqlite3 data/bungo_production.db   - データベース確認' && echo '  docker-compose up postgres          - PostgreSQL起動' && echo '  docker-compose up redis             - Redis起動'"
+    ],
+    
+    // ユーザー・環境設定
+    "remoteUser": "developer",
+    "containerEnv": {
+        "BUNGO_ENV": "development",
+        "BUNGO_DEBUG": "true",
+        "BUNGO_LOG_LEVEL": "INFO",
+        "PYTHONPATH": "/app",
+        "BUNGO_DATA_DIR": "/app/data",
+        "BUNGO_OUTPUT_DIR": "/app/output",
+        "BUNGO_CACHE_DIR": "/app/cache"
+    },
+    
+    // Git設定
+    "remoteEnv": {
+        "GIT_EDITOR": "code --wait"
+    },
+    
+    // Dev Container機能
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {
+            "ppa": true,
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {
+            "version": "latest"
+        }
+    },
+    
+    // ディレクトリマウント設定
+    "mounts": [
+        "source=${localWorkspaceFolder}/data,target=/app/data,type=bind",
+        "source=${localWorkspaceFolder}/output,target=/app/output,type=bind",
+        "source=${localWorkspaceFolder}/cache,target=/app/cache,type=bind"
+    ],
+    
+    // 起動時のワークスペース設定
+    "updateContentCommand": "echo '📂 ワークスペース更新中...'",
+    "waitFor": "postCreateCommand"
+}

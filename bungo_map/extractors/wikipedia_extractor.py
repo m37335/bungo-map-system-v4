@@ -143,7 +143,7 @@ class WikipediaExtractor:
         return None
     
     def extract_works_from_wikipedia(self, author_name: str, content: str) -> List[Dict]:
-        """Wikipedia本文から作品リストを抽出"""
+        """Wikipedia本文から作品リストを抽出（制作年代付き）"""
         works = []
         
         # 作品セクションを探す
@@ -156,16 +156,47 @@ class WikipediaExtractor:
                 start_idx = content.find(section)
                 section_text = content[start_idx:start_idx + 3000]  # 3000文字まで
                 
-                # 作品名を抽出（『』で囲まれたもの）
-                work_pattern = r'『([^』]+)』'
-                matches = re.findall(work_pattern, section_text)
+                # 作品名と年代を抽出（複数パターン）
+                patterns = [
+                    r'『([^』]+)』.*?(\d{4})年',  # 『作品名』...1234年
+                    r'(\d{4})年.*?『([^』]+)』',  # 1234年...『作品名』
+                    r'『([^』]+)』.*?（(\d{4})年.*?）',  # 『作品名』...（1234年...）
+                    r'『([^』]+)』'  # 年代なしの作品名
+                ]
                 
-                for match in matches:
-                    if len(match) > 1 and len(match) < 50:  # 妥当な長さの作品名
-                        works.append({
-                            'title': match,
-                            'wiki_url': f"https://ja.wikipedia.org/wiki/{match}"
-                        })
+                for pattern in patterns:
+                    matches = re.findall(pattern, section_text)
+                    
+                    for match in matches:
+                        if len(match) == 2:
+                            # 年代付きマッチ
+                            if pattern.startswith(r'(\d{4})'):
+                                # 年が先の場合
+                                year, title = match
+                            else:
+                                # 作品名が先の場合
+                                title, year = match
+                            
+                            try:
+                                pub_year = int(year)
+                                if 1800 <= pub_year <= 2100 and len(title) > 1 and len(title) < 50:
+                                    works.append({
+                                        'title': title,
+                                        'wiki_url': f"https://ja.wikipedia.org/wiki/{title}",
+                                        'publication_year': pub_year
+                                    })
+                            except ValueError:
+                                continue
+                                
+                        elif len(match) == 1:
+                            # 年代なしマッチ
+                            title = match if isinstance(match, str) else match[0]
+                            if len(title) > 1 and len(title) < 50:
+                                works.append({
+                                    'title': title,
+                                    'wiki_url': f"https://ja.wikipedia.org/wiki/{title}",
+                                    'publication_year': None
+                                })
         
         # 重複除去と制限
         seen = set()
@@ -180,6 +211,28 @@ class WikipediaExtractor:
         print(f"📚 {author_name} の作品を {len(unique_works)} 作品抽出しました")
         return unique_works
     
+    def _extract_publication_year_from_text(self, work_title: str, content: str) -> Optional[int]:
+        """作品の制作年代をWikipediaから抽出"""
+        # 作品名周辺のテキストから年代を抽出
+        patterns = [
+            rf'{re.escape(work_title)}.*?(\d{{4}})年',
+            rf'(\d{{4}})年.*?{re.escape(work_title)}',
+            rf'『{re.escape(work_title)}』.*?(\d{{4}})年',
+            rf'(\d{{4}})年.*?『{re.escape(work_title)}』'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, content)
+            if match:
+                try:
+                    year = int(match.group(1))
+                    if 1800 <= year <= 2100:
+                        return year
+                except (ValueError, IndexError):
+                    continue
+        
+        return None
+    
     def get_author_works(self, author_name: str, content: str = "", limit: int = 10) -> List[Dict]:
         """作者の作品リストを取得（Wikipedia から実際に抽出）"""
         # Wikipedia本文から抽出を試行
@@ -193,52 +246,52 @@ class WikipediaExtractor:
         return fallback_works[:limit]
     
     def _get_fallback_works(self, author_name: str) -> List[Dict]:
-        """フォールバック用の既知作品データ"""
+        """フォールバック用の既知作品データ（制作年代付き）"""
         famous_works = {
             "夏目漱石": [
-                {"title": "坊っちゃん", "wiki_url": "https://ja.wikipedia.org/wiki/坊っちゃん"},
-                {"title": "吾輩は猫である", "wiki_url": "https://ja.wikipedia.org/wiki/吾輩は猫である"},
-                {"title": "こころ", "wiki_url": "https://ja.wikipedia.org/wiki/こころ_(小説)"},
-                {"title": "三四郎", "wiki_url": "https://ja.wikipedia.org/wiki/三四郎_(小説)"},
-                {"title": "それから", "wiki_url": "https://ja.wikipedia.org/wiki/それから"},
-                {"title": "門", "wiki_url": "https://ja.wikipedia.org/wiki/門_(小説)"},
+                {"title": "坊っちゃん", "wiki_url": "https://ja.wikipedia.org/wiki/坊っちゃん", "publication_year": 1906},
+                {"title": "吾輩は猫である", "wiki_url": "https://ja.wikipedia.org/wiki/吾輩は猫である", "publication_year": 1905},
+                {"title": "こころ", "wiki_url": "https://ja.wikipedia.org/wiki/こころ_(小説)", "publication_year": 1914},
+                {"title": "三四郎", "wiki_url": "https://ja.wikipedia.org/wiki/三四郎_(小説)", "publication_year": 1908},
+                {"title": "それから", "wiki_url": "https://ja.wikipedia.org/wiki/それから", "publication_year": 1909},
+                {"title": "門", "wiki_url": "https://ja.wikipedia.org/wiki/門_(小説)", "publication_year": 1910},
             ],
             "森鴎外": [
-                {"title": "舞姫", "wiki_url": "https://ja.wikipedia.org/wiki/舞姫"},
-                {"title": "高瀬舟", "wiki_url": "https://ja.wikipedia.org/wiki/高瀬舟"},
-                {"title": "阿部一族", "wiki_url": "https://ja.wikipedia.org/wiki/阿部一族"},
-                {"title": "山椒大夫", "wiki_url": "https://ja.wikipedia.org/wiki/山椒大夫_(森鴎外)"},
-                {"title": "雁", "wiki_url": "https://ja.wikipedia.org/wiki/雁_(小説)"},
+                {"title": "舞姫", "wiki_url": "https://ja.wikipedia.org/wiki/舞姫", "publication_year": 1890},
+                {"title": "高瀬舟", "wiki_url": "https://ja.wikipedia.org/wiki/高瀬舟", "publication_year": 1916},
+                {"title": "阿部一族", "wiki_url": "https://ja.wikipedia.org/wiki/阿部一族", "publication_year": 1913},
+                {"title": "山椒大夫", "wiki_url": "https://ja.wikipedia.org/wiki/山椒大夫_(森鴎外)", "publication_year": 1915},
+                {"title": "雁", "wiki_url": "https://ja.wikipedia.org/wiki/雁_(小説)", "publication_year": 1911},
             ],
             "芥川龍之介": [
-                {"title": "羅生門", "wiki_url": "https://ja.wikipedia.org/wiki/羅生門_(小説)"},
-                {"title": "鼻", "wiki_url": "https://ja.wikipedia.org/wiki/鼻_(芥川龍之介)"},
-                {"title": "地獄変", "wiki_url": "https://ja.wikipedia.org/wiki/地獄変"},
-                {"title": "蜘蛛の糸", "wiki_url": "https://ja.wikipedia.org/wiki/蜘蛛の糸"},
-                {"title": "杜子春", "wiki_url": "https://ja.wikipedia.org/wiki/杜子春_(小説)"},
-                {"title": "河童", "wiki_url": "https://ja.wikipedia.org/wiki/河童_(小説)"},
+                {"title": "羅生門", "wiki_url": "https://ja.wikipedia.org/wiki/羅生門_(小説)", "publication_year": 1915},
+                {"title": "鼻", "wiki_url": "https://ja.wikipedia.org/wiki/鼻_(芥川龍之介)", "publication_year": 1916},
+                {"title": "地獄変", "wiki_url": "https://ja.wikipedia.org/wiki/地獄変", "publication_year": 1918},
+                {"title": "蜘蛛の糸", "wiki_url": "https://ja.wikipedia.org/wiki/蜘蛛の糸", "publication_year": 1918},
+                {"title": "杜子春", "wiki_url": "https://ja.wikipedia.org/wiki/杜子春_(小説)", "publication_year": 1920},
+                {"title": "河童", "wiki_url": "https://ja.wikipedia.org/wiki/河童_(小説)", "publication_year": 1927},
             ],
             "太宰治": [
-                {"title": "人間失格", "wiki_url": "https://ja.wikipedia.org/wiki/人間失格"},
-                {"title": "走れメロス", "wiki_url": "https://ja.wikipedia.org/wiki/走れメロス"},
-                {"title": "津軽", "wiki_url": "https://ja.wikipedia.org/wiki/津軽_(小説)"},
-                {"title": "斜陽", "wiki_url": "https://ja.wikipedia.org/wiki/斜陽_(小説)"},
-                {"title": "ヴィヨンの妻", "wiki_url": "https://ja.wikipedia.org/wiki/ヴィヨンの妻"},
-                {"title": "お伽草紙", "wiki_url": "https://ja.wikipedia.org/wiki/お伽草紙"},
+                {"title": "人間失格", "wiki_url": "https://ja.wikipedia.org/wiki/人間失格", "publication_year": 1948},
+                {"title": "走れメロス", "wiki_url": "https://ja.wikipedia.org/wiki/走れメロス", "publication_year": 1940},
+                {"title": "津軽", "wiki_url": "https://ja.wikipedia.org/wiki/津軽_(小説)", "publication_year": 1944},
+                {"title": "斜陽", "wiki_url": "https://ja.wikipedia.org/wiki/斜陽_(小説)", "publication_year": 1947},
+                {"title": "ヴィヨンの妻", "wiki_url": "https://ja.wikipedia.org/wiki/ヴィヨンの妻", "publication_year": 1947},
+                {"title": "お伽草紙", "wiki_url": "https://ja.wikipedia.org/wiki/お伽草紙", "publication_year": 1945},
             ],
             "川端康成": [
-                {"title": "雪国", "wiki_url": "https://ja.wikipedia.org/wiki/雪国_(小説)"},
-                {"title": "伊豆の踊子", "wiki_url": "https://ja.wikipedia.org/wiki/伊豆の踊子"},
-                {"title": "古都", "wiki_url": "https://ja.wikipedia.org/wiki/古都_(小説)"},
-                {"title": "千羽鶴", "wiki_url": "https://ja.wikipedia.org/wiki/千羽鶴_(小説)"},
-                {"title": "山の音", "wiki_url": "https://ja.wikipedia.org/wiki/山の音"},
+                {"title": "雪国", "wiki_url": "https://ja.wikipedia.org/wiki/雪国_(小説)", "publication_year": 1935},
+                {"title": "伊豆の踊子", "wiki_url": "https://ja.wikipedia.org/wiki/伊豆の踊子", "publication_year": 1926},
+                {"title": "古都", "wiki_url": "https://ja.wikipedia.org/wiki/古都_(小説)", "publication_year": 1962},
+                {"title": "千羽鶴", "wiki_url": "https://ja.wikipedia.org/wiki/千羽鶴_(小説)", "publication_year": 1952},
+                {"title": "山の音", "wiki_url": "https://ja.wikipedia.org/wiki/山の音", "publication_year": 1954},
             ],
             "三島由紀夫": [
-                {"title": "金閣寺", "wiki_url": "https://ja.wikipedia.org/wiki/金閣寺_(小説)"},
-                {"title": "仮面の告白", "wiki_url": "https://ja.wikipedia.org/wiki/仮面の告白"},
-                {"title": "潮騒", "wiki_url": "https://ja.wikipedia.org/wiki/潮騒_(三島由紀夫)"},
-                {"title": "豊饒の海", "wiki_url": "https://ja.wikipedia.org/wiki/豊饒の海"},
-                {"title": "憂国", "wiki_url": "https://ja.wikipedia.org/wiki/憂国"},
+                {"title": "金閣寺", "wiki_url": "https://ja.wikipedia.org/wiki/金閣寺_(小説)", "publication_year": 1956},
+                {"title": "仮面の告白", "wiki_url": "https://ja.wikipedia.org/wiki/仮面の告白", "publication_year": 1949},
+                {"title": "潮騒", "wiki_url": "https://ja.wikipedia.org/wiki/潮騒_(三島由紀夫)", "publication_year": 1954},
+                {"title": "豊饒の海", "wiki_url": "https://ja.wikipedia.org/wiki/豊饒の海", "publication_year": 1970},
+                {"title": "憂国", "wiki_url": "https://ja.wikipedia.org/wiki/憂国", "publication_year": 1961},
             ]
         }
         
@@ -261,7 +314,7 @@ class WikipediaExtractor:
         return Author(name=author_name)
     
     def extract_works_data(self, author_id: int, author_name: str, limit: int = 10) -> List[Work]:
-        """作品データを抽出してWorkオブジェクトのリストを返す"""
+        """作品データを抽出してWorkオブジェクトのリストを返す（制作年代付き）"""
         # Wikipedia情報を再取得（キャッシュ的な使用）
         wiki_info = self.search_author(author_name)
         content = wiki_info['content'] if wiki_info else ""
@@ -273,7 +326,8 @@ class WikipediaExtractor:
             work = Work(
                 author_id=author_id,
                 title=work_data['title'],
-                wiki_url=work_data['wiki_url']
+                wiki_url=work_data['wiki_url'],
+                publication_year=work_data.get('publication_year')
             )
             works.append(work)
         
