@@ -399,11 +399,52 @@ class BungoDB(Database):
         """地名の総数"""
         return self.get_place_count()
     
+    def get_places_with_coordinates_count(self) -> int:
+        """座標が設定済みの地名数を取得"""
+        with self.get_connection() as conn:
+            cursor = conn.execute("SELECT COUNT(*) FROM places WHERE lat IS NOT NULL AND lng IS NOT NULL")
+            result = cursor.fetchone()
+            return result[0] if result else 0
+    
+    def get_places_without_coordinates(self, limit: int = None) -> List[Dict]:
+        """座標が未設定の地名を取得（辞書形式）"""
+        query = """
+        SELECT place_id, place_name
+        FROM places 
+        WHERE lat IS NULL OR lng IS NULL
+        ORDER BY place_id
+        """
+        
+        if limit:
+            query += f" LIMIT {limit}"
+        
+        with self.get_connection() as conn:
+            cursor = conn.execute(query)
+            places = []
+            
+            for row in cursor.fetchall():
+                places.append({
+                    'place_id': row[0],
+                    'place_name': row[1]
+                })
+            
+            return places
+    
+    def update_place_coordinates(self, place_id: int, lat: float, lng: float) -> bool:
+        """地名の座標を更新"""
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE places SET lat = ?, lng = ? WHERE place_id = ?",
+                (lat, lng, place_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    
     def get_recent_places(self, limit: int = 10) -> List[Dict]:
         """最新の地名を取得"""
         with self.get_connection() as conn:
             cursor = conn.execute("""
-            SELECT p.place_name, p.extraction_method, p.confidence, p.sentence,
+            SELECT p.place_name, p.extraction_method, p.confidence, p.sentence, p.lat, p.lng,
                    w.title as work_title, a.name as author_name
             FROM places p
             JOIN works w ON p.work_id = w.work_id
@@ -419,8 +460,10 @@ class BungoDB(Database):
                     'extraction_method': row[1],
                     'confidence': row[2],
                     'sentence': row[3],
-                    'work_title': row[4],
-                    'author_name': row[5]
+                    'lat': row[4],
+                    'lng': row[5],
+                    'work_title': row[6],
+                    'author_name': row[7]
                 })
             return places
 
