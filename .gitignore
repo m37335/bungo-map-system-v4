@@ -28,6 +28,20 @@ ENV/
 .venv/
 .env/
 
+# Environment Configuration
+.env
+.env.local
+.env.*.local
+env.production
+.config/
+
+# API Keys & Secrets (重要!)
+*api_key*
+*secret*
+*token*
+config.json
+secrets.json
+
 # IDE
 .vscode/
 .idea/

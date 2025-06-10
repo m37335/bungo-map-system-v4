@@ -6,8 +6,10 @@ GiNZAが利用できない環境でも動作する地名抽出機能
 """
 
 import re
+import logging
 from typing import List, Dict, Optional, Tuple
 from bungo_map.core.models import Place
+from bungo_map.utils.aozora_text_cleaner import clean_aozora_sentence
 
 
 class SimplePlaceExtractor:
@@ -20,21 +22,21 @@ class SimplePlaceExtractor:
     def _build_place_patterns(self) -> List[Dict]:
         """地名抽出用のパターンを構築"""
         return [
-            # 都道府県
+            # 都道府県（境界条件強化版）
             {
-                'pattern': r'[北海青森岩手宮城秋田山形福島茨城栃木群馬埼玉千葉東京神奈川新潟富山石川福井山梨長野岐阜静岡愛知三重滋賀京都大阪兵庫奈良和歌山鳥取島根岡山広島山口徳島香川愛媛高知福岡佐賀長崎熊本大分宮崎鹿児島沖縄][都道府県]',
+                'pattern': r'(?<![一-龯])[北海青森岩手宮城秋田山形福島茨城栃木群馬埼玉千葉東京神奈川新潟富山石川福井山梨長野岐阜静岡愛知三重滋賀京都大阪兵庫奈良和歌山鳥取島根岡山広島山口徳島香川愛媛高知福岡佐賀長崎熊本大分宮崎鹿児島沖縄][都道府県](?![一-龯])',
                 'category': '都道府県',
                 'confidence': 0.9
             },
-            # 市区町村
+            # 市区町村（境界条件強化版）
             {
-                'pattern': r'[一-龯]{2,8}[市区町村]',
+                'pattern': r'(?<![一-龯])[一-龯]{2,6}[市区町村](?![一-龯])',
                 'category': '市区町村',
                 'confidence': 0.8
             },
-            # 郡
+            # 郡（境界条件強化版）
             {
-                'pattern': r'[一-龯]{2,6}[郡]',
+                'pattern': r'(?<![一-龯])[一-龯]{2,4}[郡](?![一-龯])',
                 'category': '郡',
                 'confidence': 0.7
             },
@@ -90,44 +92,73 @@ class SimplePlaceExtractor:
         ]
     
     def extract_places_from_text(self, work_id: int, text: str, aozora_url: str = None) -> List[Place]:
-        """テキストから地名を抽出してPlaceオブジェクトのリストを返す"""
+        """テキストから地名を抽出"""
+        if not text:
+            return []
+        
         places = []
         
-        # テキストを文に分割
-        sentences = self._split_into_sentences(text)
+        # 文に分割
+        sentences = re.split(r'[。！？]', text)
         
-        for sentence_idx, sentence in enumerate(sentences):
-            # 各パターンで地名を検索
+        for i, sentence in enumerate(sentences):
+            sentence = sentence.strip()
+            if len(sentence) < 10:  # 短すぎる文はスキップ
+                continue
+            
+            # 青空文庫テキストのクリーニング
+            clean_sentence = clean_aozora_sentence(sentence)
+            if len(clean_sentence) < 10:  # クリーニング後も短い場合はスキップ
+                continue
+            
+            # 各パターンを適用
             for pattern_info in self.place_patterns:
                 pattern = pattern_info['pattern']
                 category = pattern_info['category']
-                base_confidence = pattern_info['confidence']
+                confidence = pattern_info['confidence']
                 
-                matches = list(re.finditer(pattern, sentence))
-                
+                # クリーンアップされた文で検索
+                matches = re.finditer(pattern, clean_sentence)
                 for match in matches:
-                    place_name = match.group(0)
+                    place_name = match.group()
                     
-                    # 前後の文脈を取得
-                    before_text = sentences[sentence_idx - 1] if sentence_idx > 0 else ""
-                    after_text = sentences[sentence_idx + 1] if sentence_idx < len(sentences) - 1 else ""
+                    # 前後のコンテキストを取得（元の文から）
+                    before_text, after_text = self._get_context(sentence, place_name)
                     
-                    # 信頼度を調整
-                    confidence = self._adjust_confidence(place_name, sentence, base_confidence)
+                    # 文脈による信頼度調整
+                    adjusted_confidence = self._adjust_confidence(place_name, clean_sentence, confidence)
                     
                     place = Place(
                         work_id=work_id,
                         place_name=place_name,
-                        before_text=before_text[:500],  # 500文字制限
-                        sentence=sentence,
-                        after_text=after_text[:500],   # 500文字制限
+                        before_text=before_text,
+                        sentence=clean_sentence,  # クリーンアップされた文を保存
+                        after_text=after_text,
                         aozora_url=aozora_url,
-                        confidence=confidence,
-                        extraction_method=f"regex_{category}"
+                        confidence=adjusted_confidence,
+                        extraction_method=f'regex_{category}'
                     )
                     places.append(place)
         
+        # 重複除去
         return self._deduplicate_places(places)
+    
+    def _get_context(self, sentence: str, place_name: str, context_length: int = 20) -> Tuple[str, str]:
+        """地名の前後のコンテキストを取得"""
+        try:
+            start_idx = sentence.find(place_name)
+            if start_idx == -1:
+                return "", ""
+            
+            before_start = max(0, start_idx - context_length)
+            after_end = min(len(sentence), start_idx + len(place_name) + context_length)
+            
+            before_text = sentence[before_start:start_idx].strip()
+            after_text = sentence[start_idx + len(place_name):after_end].strip()
+            
+            return before_text, after_text
+        except Exception:
+            return "", ""
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """テキストを文に分割"""
@@ -175,18 +206,79 @@ class SimplePlaceExtractor:
         return max(0.1, min(confidence, 1.0))
     
     def _deduplicate_places(self, places: List[Place]) -> List[Place]:
-        """重複する地名を除去（同じ作品内の同じ地名）"""
-        seen = set()
-        unique_places = []
+        """重複する地名を除去（包含関係を考慮した高度な重複排除）"""
+        if not places:
+            return []
         
+        # 優先度定義（extraction_method別）
+        method_priority = {
+            'regex_市区町村': 1,      # 完全地名が最高優先度
+            'regex_都道府県': 2,
+            'regex_郡': 3,
+            'regex_有名地名': 4        # 有名地名は最低優先度
+        }
+        
+        # 作品別にグループ化
+        by_work = {}
         for place in places:
-            # 作品ID + 地名 で重複チェック
-            key = (place.work_id, place.place_name)
-            if key not in seen:
-                seen.add(key)
-                unique_places.append(place)
+            if place.work_id not in by_work:
+                by_work[place.work_id] = []
+            by_work[place.work_id].append(place)
         
-        return unique_places
+        deduplicated = []
+        
+        for work_id, work_places in by_work.items():
+            # 同じsentence内での重複排除
+            by_sentence = {}
+            for place in work_places:
+                sentence_key = place.sentence if place.sentence else ""
+                if sentence_key not in by_sentence:
+                    by_sentence[sentence_key] = []
+                by_sentence[sentence_key].append(place)
+            
+            for sentence, sentence_places in by_sentence.items():
+                if len(sentence_places) == 1:
+                    deduplicated.extend(sentence_places)
+                    continue
+                
+                # 包含関係をチェック
+                filtered_places = []
+                sentence_places_sorted = sorted(
+                    sentence_places, 
+                    key=lambda p: (
+                        method_priority.get(p.extraction_method, 5),
+                        -len(p.place_name),  # 長い地名を優先
+                        -p.confidence
+                    )
+                )
+                
+                for current_place in sentence_places_sorted:
+                    is_contained = False
+                    
+                    # 既に選択された地名に含まれるかチェック
+                    for selected_place in filtered_places:
+                        if (current_place.place_name in selected_place.place_name and 
+                            current_place.place_name != selected_place.place_name):
+                            is_contained = True
+                            break
+                    
+                    if not is_contained:
+                        # 現在の地名が既存の地名を包含するかチェック
+                        to_remove = []
+                        for i, selected_place in enumerate(filtered_places):
+                            if (selected_place.place_name in current_place.place_name and
+                                selected_place.place_name != current_place.place_name):
+                                to_remove.append(i)
+                        
+                        # 包含される地名を除去
+                        for i in reversed(to_remove):
+                            filtered_places.pop(i)
+                        
+                        filtered_places.append(current_place)
+                
+                deduplicated.extend(filtered_places)
+        
+        return deduplicated
     
     def extract_places_with_context(self, text: str, work_id: int, aozora_url: str) -> List[Place]:
         """既存のGiNZA抽出器と互換性のあるインターフェース"""

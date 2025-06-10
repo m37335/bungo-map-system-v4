@@ -1,17 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-文豪ゆかり地図システム v2.0 - メインCLI
+文豪ゆかり地図システム v3.0 - メインCLI
 """
 
+import os
+from pathlib import Path
 import click
+
+# .envファイルの読み込み
+try:
+    from dotenv import load_dotenv
+    # プロジェクトルートの.envファイルを読み込み
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✅ 環境変数読み込み完了: {env_path}")
+    else:
+        print(f"⚠️ .envファイルが見つかりません: {env_path}")
+except ImportError:
+    print("⚠️ python-dotenvがインストールされていません")
+
 from bungo_map.core.database import init_db
 
 
 @click.group()
-@click.version_option(version="2.0.0")
+@click.version_option(version="3.0.0")
 def main():
-    """🌟 文豪ゆかり地図システム v2.0"""
+    """🌟 文豪ゆかり地図システム v3.0"""
     pass
 
 
@@ -61,11 +77,182 @@ def collect(author: str, limit: int, demo: bool, ginza: bool):
 from .search import search
 from .aozora import aozora
 from .add import add
+from .ai import ai
+from .setup import setup
 
 # 機能をメインCLIに追加
 main.add_command(search)
 main.add_command(aozora)
 main.add_command(add)
+main.add_command(ai)
+main.add_command(setup)
+
+
+@main.command()
+@click.option('--reset', is_flag=True, help='placesテーブルをリセットしてからパイプラインを実行')
+@click.option('--limit', type=int, help='処理する作品数の上限')
+@click.option('--batch-size', type=int, default=10, help='バッチサイズ')
+@click.option('--ai-geocoding', is_flag=True, default=True, help='AI文脈判断型Geocodingを使用')
+@click.option('--enhanced-extraction', is_flag=True, default=True, help='強化版地名抽出を使用')
+@click.option('--test-mode', is_flag=True, help='テストモード（3作品のみ処理）')
+def pipeline(reset: bool, limit: int, batch_size: int, ai_geocoding: bool, enhanced_extraction: bool, test_mode: bool):
+    """🚀 完全統合パイプライン（最新版）
+    
+    青空文庫処理改善 + AI文脈判断型Geocoding + 強化版地名抽出
+    """
+    from bungo_map.cli.full_pipeline import FullPipeline
+    
+    click.echo("🚀 完全統合パイプライン開始")
+    click.echo("   ✨ 青空文庫データ処理改善済み")
+    click.echo("   🤖 AI文脈判断型Geocoding (88.9%精度)")
+    click.echo("   🗺️ 強化版地名抽出器")
+    
+    # パイプライン設定
+    pipeline = FullPipeline()
+    pipeline.batch_size = batch_size
+    pipeline.use_geocoding = ai_geocoding
+    
+    if test_mode:
+        limit = 3
+        click.echo("⚠️ テストモード: 3作品のみ処理")
+    
+    try:
+        # パイプライン実行
+        result = pipeline.run_full_pipeline(
+            reset_data=reset,
+            limit=limit,
+            use_ai=enhanced_extraction,
+            enable_geocoding=ai_geocoding
+        )
+        
+        # 結果表示
+        click.echo("\n🎉 パイプライン完了!")
+        
+        stats = result.get('stats', {})
+        click.echo(f"📊 統計:")
+        click.echo(f"   📚 処理作品数: {stats.get('works_processed', 0)}")
+        click.echo(f"   🗺️ 抽出地名数: {stats.get('places_extracted', 0)}")
+        click.echo(f"   🌍 Geocoding成功: {stats.get('geocoding_success', 0)}")
+        click.echo(f"   📈 Geocoding成功率: {stats.get('geocoding_success_rate', 0):.1f}%")
+        click.echo(f"   ⏱️ 実行時間: {stats.get('total_time', 0):.1f}秒")
+        
+        # 抽出手法別統計
+        extraction_methods = stats.get('extraction_methods', {})
+        if extraction_methods:
+            click.echo(f"\n🔍 抽出手法別統計:")
+            for method, count in sorted(extraction_methods.items(), key=lambda x: x[1], reverse=True):
+                click.echo(f"   {method}: {count}件")
+        
+    except Exception as e:
+        click.echo(f"❌ パイプラインエラー: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@main.command()
+@click.option('--place-names', help='テストする地名（カンマ区切り）', default='東京,京都,ローマ,柏,清水')
+@click.option('--with-context', is_flag=True, help='文脈付きでテスト')
+def test_geocoding(place_names: str, with_context: bool):
+    """🤖 AI文脈判断型Geocodingテスト"""
+    from bungo_map.ai.context_aware_geocoding import ContextAwareGeocodingService
+    
+    click.echo("🤖 AI文脈判断型Geocodingテスト")
+    
+    service = ContextAwareGeocodingService()
+    places = [name.strip() for name in place_names.split(',')]
+    
+    for place_name in places:
+        click.echo(f"\n🗺️ テスト地名: {place_name}")
+        
+        if with_context:
+            # 文脈付きテスト
+            test_contexts = [
+                f"彼は{place_name}という名前の人だった。",  # 人名文脈
+                f"今日は{place_name}へ旅行に行った。",     # 地名文脈
+                f"{place_name}から電車で帰宅した。",       # 地名文脈
+            ]
+            
+            for context in test_contexts:
+                result = service.analyze_and_geocode(place_name, context)
+                
+                if result.success:
+                    click.echo(f"   ✅ {context[:30]}... → 🌍 ({result.latitude:.4f}, {result.longitude:.4f})")
+                    click.echo(f"      信頼度: {result.confidence:.2f}, 判定: {result.context_analysis.get('classification', 'N/A')}")
+                else:
+                    click.echo(f"   ❌ {context[:30]}... → 失敗: {result.error}")
+        else:
+            # 基本テスト
+            result = service.geocode_place_name(place_name)
+            
+            if result.success:
+                click.echo(f"   ✅ 🌍 ({result.latitude:.4f}, {result.longitude:.4f})")
+                click.echo(f"      信頼度: {result.confidence:.2f}, 方法: {result.method}")
+            else:
+                click.echo(f"   ❌ 失敗: {result.error}")
+
+
+@main.command()
+@click.option('--work-id', type=int, help='テストする作品ID')
+@click.option('--work-title', help='テストする作品タイトル')
+@click.option('--content-only', is_flag=True, help='青空文庫処理のみテスト')
+def test_processing(work_id: int, work_title: str, content_only: bool):
+    """📚 青空文庫処理＋強化版地名抽出テスト"""
+    import sqlite3
+    from bungo_map.processors.aozora_content_processor import AozoraContentProcessor
+    from bungo_map.extractors.enhanced_place_extractor import EnhancedPlaceExtractor
+    
+    # 作品取得
+    with sqlite3.connect('data/bungo_production.db') as conn:
+        if work_id:
+            cursor = conn.execute("SELECT work_id, title, content FROM works WHERE work_id = ?", (work_id,))
+        elif work_title:
+            cursor = conn.execute("SELECT work_id, title, content FROM works WHERE title LIKE ?", (f'%{work_title}%',))
+        else:
+            cursor = conn.execute("SELECT work_id, title, content FROM works WHERE length(content) > 10000 LIMIT 1")
+        
+        row = cursor.fetchone()
+        if not row:
+            click.echo("❌ 指定された作品が見つかりません")
+            return
+        
+        work_id, title, content = row
+        
+    click.echo(f"📚 テスト作品: {title} (ID: {work_id})")
+    click.echo(f"📊 元データ: {len(content):,}文字")
+    
+    # 青空文庫処理テスト
+    processor = AozoraContentProcessor()
+    result = processor.process_work_content(work_id, content)
+    
+    if result['success']:
+        click.echo(f"✅ 青空文庫処理成功:")
+        stats = result['stats']
+        click.echo(f"   📖 {stats['original_length']:,} → {stats['processed_length']:,}文字")
+        click.echo(f"   📝 {stats['sentence_count']}文に分割")
+        click.echo(f"   📈 圧縮率: {(1 - stats['processed_length']/stats['original_length'])*100:.1f}%")
+        
+        # サンプル文表示
+        sentences = result['sentences']
+        click.echo(f"\n📝 サンプル文（最初の3文）:")
+        for i, sentence in enumerate(sentences[:3]):
+            click.echo(f"   {i+1}. {sentence[:80]}{'...' if len(sentence) > 80 else ''}")
+        
+        if not content_only:
+            # 強化版地名抽出テスト
+            click.echo(f"\n🗺️ 強化版地名抽出テスト...")
+            extractor = EnhancedPlaceExtractor()
+            places = extractor.extract_places_from_work(work_id, content)
+            
+            click.echo(f"✅ 地名抽出完了: {len(places)}件")
+            
+            # 地名サンプル表示
+            for i, place in enumerate(places[:5]):
+                click.echo(f"\n{i+1}. 🗺️ {place.place_name}")
+                click.echo(f"   📝 文: {place.sentence[:60]}...")
+                click.echo(f"   ⬅️ 前: {place.before_text[:30]}...")
+                click.echo(f"   ➡️ 後: {place.after_text[:30]}...")
+    else:
+        click.echo(f"❌ 青空文庫処理失敗: {result['error']}")
 
 
 @main.command()

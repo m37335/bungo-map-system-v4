@@ -37,5 +37,8 @@ click>=8.1.0
 aiohttp>=3.9.0
 asyncio
 
+# === AI & Machine Learning ===
+openai==0.28.1
+
 # === Development & Testing ===
 pytest>=7.4.0 
