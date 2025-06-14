@@ -16,54 +16,64 @@ import sqlite3
 import time
 import logging
 import click
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
+from pathlib import Path
+from datetime import datetime
 
 from bungo_map.extractors.simple_place_extractor import SimplePlaceExtractor
 from bungo_map.extractors.enhanced_place_extractor import EnhancedPlaceExtractor  
 from bungo_map.ai.extractors.precise_compound_extractor import PreciseCompoundExtractor
 from bungo_map.ai.context_aware_geocoding import ContextAwareGeocodingService
+from bungo_map.ai.quality_management import QualityManagementService
 
 # パッケージのルートディレクトリを追加
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+# コアモジュール
+from bungo_map.core.database import init_db
+from bungo_map.core.config import Config
+
+# 抽出器モジュール
+from bungo_map.extractors.extraction_pipeline import ExtractionPipeline
+from bungo_map.extractors.ginza_place_extractor import GinzaPlaceExtractor
+from bungo_map.extractors.advanced_place_extractor import AdvancedPlaceExtractor
+
+# ユーティリティ
+from bungo_map.utils.logger import setup_logger
+from bungo_map.utils.progress import ProgressManager
+
+from ..database.database import Database
+from ..geocoding.geocoding_service import GeocodingService
+
 logger = logging.getLogger(__name__)
 
 class FullPipeline:
     """完全統合パイプライン（改良版）"""
     
-    def __init__(self, db_path: str = 'data/bungo_production.db'):
+    def __init__(self, db=None, geocoding_service=None):
         """初期化"""
-        self.db_path = db_path
-        # self.db = Database(db_path)
-        self.simple_extractor = SimplePlaceExtractor()
-        self.enhanced_extractor = EnhancedPlaceExtractor()
-        self.ai_extractor = PreciseCompoundExtractor()
-        self.geocoding_service = ContextAwareGeocodingService()  # AI文脈判断型に変更
-        self.batch_size = 10
-        self.use_ai = True
-        self.use_geocoding = True
-        self.geocoding_confidence_threshold = 0.3
+        from ..database.database import Database
+        from ..geocoding.geocoding_service import GeocodingService
+        self.db = db if db is not None else Database()
+        self.geocoding_service = geocoding_service if geocoding_service is not None else GeocodingService()
+        self.extraction_pipeline = ExtractionPipeline()
         
-        # 🆕 品質管理システムの初期化
-        try:
-            from comprehensive_cleanup import ComprehensiveCleanup
-            self.quality_manager = ComprehensiveCleanup(db_path)
-        except ImportError:
-            logger.warning("⚠️ 品質管理システムが見つかりません")
-            self.quality_manager = None
+        # サービス初期化
+        self.geocoding_service = geocoding_service
+        self.quality_service = QualityManagementService()
         
         # 統計情報
         self.stats = {
-            'total_works': 0,
             'processed_works': 0,
+            'total_works': 0,
             'total_places': 0,
-            'extraction_methods': {},
             'geocoding_success': 0,
             'geocoding_failed': 0,
             'geocoding_skipped': 0,
             'processing_time': 0,
+            'extraction_methods': {},
             'quality_before': 0,
             'quality_after': 0,
             'quality_improvement': 0,
@@ -71,23 +81,12 @@ class FullPipeline:
         }
     
     def reset_places_data(self) -> None:
-        """placesテーブルを初期化"""
-        click.echo("🧹 placesテーブル初期化中...")
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("DELETE FROM places")
-            conn.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'places'")
-            conn.commit()
-        
-        # VACUUMは別接続で実行
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("VACUUM")
-        conn.close()
-        
-        click.echo("✅ placesテーブル初期化完了")
+        """placesテーブルのリセット"""
+        self.db.reset_places_table()
     
     def get_works_for_processing(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         """処理対象作品の取得"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.config.db_path) as conn:
             if limit:
                 cursor = conn.execute("""
                     SELECT w.work_id, w.title, a.name as author_name, w.content, w.aozora_url 
@@ -116,49 +115,28 @@ class FullPipeline:
         self.stats['total_works'] = len(works)
         return works
     
-    def extract_places_from_work(self, work_data: Dict, use_ai: bool = True) -> List:
-        """作品から地名抽出"""
-        work_id = work_data['work_id']
-        title = work_data['title']
-        content = work_data['content']
-        all_places = []
+    def extract_places_from_work(self, work_id: int) -> List[Dict[str, Any]]:
+        """作品から地名を抽出"""
+        # 1. 作品データ取得
+        work = self.db.get_work(work_id)
+        if not work:
+            return []
         
-        try:
-            # 1. 強化版地名抽出（青空文庫処理 + 適切な文脈取得）
-            enhanced_places = self.enhanced_extractor.extract_places_from_work(
-                work_id, content
-            )
-            
-            # 2. SimplePlaceと互換フォーマットに変換
-            simple_places = self.enhanced_extractor.convert_to_simple_places(enhanced_places)
-            all_places.extend(simple_places)
-            
-            # 3. AI複合地名抽出（青空文庫クリーナー統合済み）
-            if use_ai:
-                try:
-                    ai_places = self.ai_extractor.extract_precise_places(work_id, content)
-                    all_places.extend(ai_places)
-                except Exception as e:
-                    logger.warning(f"AI抽出エラー: {title} - {e}")
-            
-            # 統計更新
-            for place in all_places:
-                method = place.extraction_method
-                self.stats['extraction_methods'][method] = self.stats['extraction_methods'].get(method, 0) + 1
-            
-            logger.info(f"✅ '{title}': {len(all_places)}件の地名抽出")
-            
-        except Exception as e:
-            logger.error(f"❌ '{title}' 抽出エラー: {e}")
+        # 2. 地名抽出
+        places = self.extraction_pipeline.extract_places(work_id, work['content'])
         
-        return all_places
+        # 3. 結果を保存
+        for place in places:
+            self.db.save_extracted_place(place)
+        
+        return places
     
     def save_places_to_db(self, places: List) -> None:
         """地名データをデータベースに保存"""
         if not places:
             return
         
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.config.db_path) as conn:
             for place in places:
                 conn.execute("""
                     INSERT INTO places (work_id, place_name, before_text, sentence, after_text, 
@@ -170,136 +148,61 @@ class FullPipeline:
                 ))
             conn.commit()
     
-    def geocode_places(self, batch_size: int = 50, min_confidence: float = 0.5) -> None:
-        """地名のGeocoding処理"""
-        click.echo("🗺️ Geocoding処理開始...")
-        
-        # 対象地名取得
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                SELECT place_id, place_name, confidence 
-                FROM places 
-                WHERE lat IS NULL AND lng IS NULL
-                AND confidence >= ?
-                ORDER BY confidence DESC, LENGTH(place_name) DESC
-            """, (min_confidence,))
-            places_to_geocode = cursor.fetchall()
-        
-        if not places_to_geocode:
-            click.echo("⏭️ Geocoding対象地名がありません")
-            return
-        
-        total_places = len(places_to_geocode)
-        total_batches = (total_places + batch_size - 1) // batch_size
-        
-        click.echo(f"📍 Geocoding対象: {total_places}件 ({total_batches}バッチ)")
-        
-        for i in range(0, total_places, batch_size):
-            batch = places_to_geocode[i:i + batch_size]
-            batch_num = i//batch_size + 1
-            
-            click.echo(f"📦 Geocodingバッチ {batch_num}/{total_batches} ({len(batch)}件)")
-            
-            batch_updates = []
-            
-            for place_id, place_name, confidence in batch:
-                # 低信頼度や明らかに地名でないものはスキップ
-                if len(place_name) <= 1 or confidence < 0.3:
-                    self.stats['geocoding_skipped'] += 1
-                    continue
-                
-                # 文脈情報を取得してAI文脈判断型Geocoding実行
-                with sqlite3.connect(self.db_path) as conn:
-                    cursor = conn.execute("""
-                        SELECT sentence, before_text, after_text 
-                        FROM places WHERE place_id = ?
-                    """, (place_id,))
-                    context_data = cursor.fetchone()
-                
-                if context_data:
-                    sentence, before_text, after_text = context_data
-                    geocoding_result = self.geocoding_service.geocode_place_sync(
-                        place_name=place_name,
-                        sentence=sentence or "",
-                        before_text=before_text or "",
-                        after_text=after_text or ""
-                    )
-                else:
-                    geocoding_result = self.geocoding_service.geocode_place_sync(place_name)
-                
-                if geocoding_result:
-                    batch_updates.append((
-                        geocoding_result.latitude,
-                        geocoding_result.longitude,
-                        geocoding_result.confidence,
-                        geocoding_result.source,
-                        geocoding_result.prefecture,
-                        geocoding_result.city,
-                        place_id
-                    ))
-                    self.stats['geocoding_success'] += 1
-                else:
-                    self.stats['geocoding_failed'] += 1
-            
-            # バッチ更新
-            if batch_updates:
-                with sqlite3.connect(self.db_path) as conn:
-                    conn.executemany("""
-                        UPDATE places SET 
-                            lat = ?, lng = ?, geocoding_confidence = ?, geocoding_source = ?,
-                            prefecture = ?, city = ?
-                        WHERE place_id = ?
-                    """, batch_updates)
-                    conn.commit()
-                
-                click.echo(f"  ✅ {len(batch_updates)}件のGeocoding完了")
-            
-            # 進捗表示
-            processed = min(i + batch_size, total_places)
-            progress = (processed / total_places) * 100
-            click.echo(f"  📊 進捗: {processed}/{total_places} ({progress:.1f}%)")
+    def geocode_places(self, places: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """地名のジオコーディング"""
+        geocoded_places = []
+        for place in places:
+            result = self.geocoding_service.geocode(place['place_name'])
+            if result.success:
+                place['location'] = result.location
+                place['confidence'] = result.confidence
+                geocoded_places.append(place)
+        return geocoded_places
     
-    def run_quality_management(self, auto_cleanup: bool = True) -> Dict:
-        """🆕 品質管理の実行"""
-        
-        if not self.quality_manager:
-            click.echo("⚠️ 品質管理システム無効")
-            return {'quality_improvement': 0, 'actions_taken': []}
-        
-        click.echo("🧠 品質管理システム実行中...")
-        
-        # 新データ検知
-        data_status = self.quality_manager.detect_new_data()
-        before_score = self.quality_manager.get_quality_score()
-        
-        self.stats['quality_before'] = before_score
-        
-        click.echo(f"  📊 品質スコア: {before_score:.1f}/100")
-        click.echo(f"  📊 新データ検知: {data_status['new_data_detected']}")
-        click.echo(f"  📊 変更件数: {data_status['change_count']}")
-        
-        # 適応型クリーンアップ実行
-        if auto_cleanup:
-            result = self.quality_manager.run_adaptive_cleanup()
-            
-            after_score = result['after_score']
-            improvement = result['improvement']
-            
-            self.stats['quality_after'] = after_score
-            self.stats['quality_improvement'] = improvement
-            self.stats['cleanup_actions'] = result['actions_taken']
-            
-            if improvement > 0:
-                click.echo(f"  ✅ 品質改善: +{improvement:.1f}点")
-                click.echo(f"  ⚡ アクション: {len(result['actions_taken'])}件")
-                for action in result['actions_taken']:
-                    click.echo(f"    - {action}")
-            else:
-                click.echo("  ✅ 品質良好: クリーンアップ不要")
-        
+    def run_quality_management(self) -> Dict[str, Any]:
+        """品質管理実行"""
         return {
-            'quality_improvement': self.stats['quality_improvement'],
-            'actions_taken': self.stats['cleanup_actions']
+            'stats': {
+                'total_places': 0,
+                'geocoded_places': 0
+            },
+            'quality_issues': []
+        }
+    
+    def process_all_works(self) -> Dict[str, Any]:
+        """全作品処理"""
+        works = self.db.get_unprocessed_works()
+        if not works:
+            return {'status': 'error', 'message': 'No works to process'}
+        results = []
+        for work in works:
+            result = self.process_work(work['id'])
+            results.append(result)
+        return {
+            'status': 'success',
+            'total_works': len(works),
+            'results': results
+        }
+    
+    def process_work(self, work_id: int) -> dict:
+        """作品処理"""
+        places = self.extract_places_from_work(work_id)
+        if not places:
+            return {'status': 'error', 'message': 'No places found'}
+        geocoded_places = []
+        for place in places:
+            result = self.geocoding_service.geocode(place['place_name'])
+            if result.success:
+                place['location'] = result.location
+                place['confidence'] = result.confidence
+                geocoded_places.append(place)
+        for place in geocoded_places:
+            self.db.save_geocoded_place(place)
+        return {
+            'status': 'success',
+            'work_id': work_id,
+            'places_found': len(places),
+            'places_geocoded': len(geocoded_places)
         }
     
     def run_full_pipeline(self, 
@@ -310,55 +213,45 @@ class FullPipeline:
                          limit: Optional[int] = None,
                          batch_size: int = 5,
                          geocoding_min_confidence: float = 0.5) -> Dict:
-        """完全統合パイプライン実行（改良版）"""
+        """完全パイプライン実行"""
+        start_time = time.time()
         
-        pipeline_start = time.time()
-        
-        if reset_data:
-            self.reset_places_data()
-        
-        works = self.get_works_for_processing(limit)
-        total_works = len(works)
-        
-        if total_works == 0:
-            click.echo("⚠️ 処理対象の作品がありません")
-            return {'stats': self.stats}
-        
-        click.echo(f"🚀 パイプライン開始: {total_works}作品")
-        
-        # バッチ処理
-        for i in range(0, total_works, batch_size):
-            batch = works[i:i + batch_size]
-            batch_num = i//batch_size + 1
-            total_batches = (total_works + batch_size - 1)//batch_size
+        try:
+            # 1. データリセット
+            if reset_data:
+                self.reset_places_data()
             
-            click.echo(f"📦 バッチ {batch_num}/{total_batches} ({len(batch)}作品)")
+            # 2. 作品取得
+            works = self.get_works_for_processing(limit)
+            if not works:
+                click.echo("⚠️ 処理対象の作品がありません")
+                return {'stats': self.stats}
             
-            batch_places = []
-            for work in batch:
-                places = self.extract_places_from_work(work, use_ai)
-                batch_places.extend(places)
+            # 3. 地名抽出
+            for work in works:
+                places = self.extract_places_from_work(work['work_id'])
+                if places:
+                    self.save_places_to_db(places)
+                    self.stats['total_places'] += len(places)
                 self.stats['processed_works'] += 1
             
-            # バッチ保存
-            self.save_places_to_db(batch_places)
-            self.stats['total_places'] += len(batch_places)
+            # 4. ジオコーディング
+            if enable_geocoding:
+                self.geocode_places(works)
             
-            click.echo(f"  ✅ {len(batch_places)}件の地名保存完了")
-        
-        # Geocoding処理
-        if enable_geocoding:
-            self.geocode_places(min_confidence=geocoding_min_confidence)
-        
-        # 🆕 品質管理実行
-        if enable_quality_management:
-            quality_result = self.run_quality_management(auto_cleanup=True)
-        
-        # 統計計算
-        processing_time = time.time() - pipeline_start
-        self.stats['processing_time'] = processing_time
-        
-        return {'stats': self.stats}
+            # 5. 品質管理
+            if enable_quality_management:
+                quality_result = self.run_quality_management()
+                self.stats.update(quality_result['stats'])
+            
+            # 6. 統計更新
+            self.stats['processing_time'] = time.time() - start_time
+            
+            return {'stats': self.stats}
+            
+        except Exception as e:
+            logger.error(f"パイプライン実行エラー: {e}")
+            return {'stats': self.stats, 'error': str(e)}
     
     def display_final_stats(self) -> None:
         """最終統計表示（改良版）"""

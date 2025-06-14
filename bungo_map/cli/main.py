@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-文豪ゆかり地図システム v3.0 - メインCLI
+文豪ゆかり地図システム v4.0 - メインCLI
 """
 
 import os
 from pathlib import Path
 import click
+from typing import Optional, Dict, Any
 
 # .envファイルの読み込み
 try:
@@ -21,14 +22,28 @@ try:
 except ImportError:
     print("⚠️ python-dotenvがインストールされていません")
 
+# コアモジュールのインポート
 from bungo_map.core.database import init_db
 
+# CLIコマンドモジュールのインポート
+from bungo_map.cli.search import search
+from bungo_map.cli.aozora import aozora
+from bungo_map.cli.add import add
+from bungo_map.cli.ai import ai
+from bungo_map.cli.setup import setup
 
 @click.group()
-@click.version_option(version="3.0.0")
+@click.version_option(version="4.0.0")
 def main():
-    """🌟 文豪ゆかり地図システム v3.0"""
+    """🌟 文豪ゆかり地図システム v4.0"""
     pass
+
+# 機能をメインCLIに追加
+main.add_command(search)
+main.add_command(aozora)
+main.add_command(add)
+main.add_command(ai)
+main.add_command(setup)
 
 
 @main.command()
@@ -71,21 +86,6 @@ def collect(author: str, limit: int, demo: bool, ginza: bool):
         click.echo("  --demo                      # デモデータ")
         click.echo("  --ginza                     # GiNZA NLP抽出")
         click.echo("  --demo --ginza              # デモ + GiNZA")
-
-
-# 機能モジュールをインポート
-from .search import search
-from .aozora import aozora
-from .add import add
-from .ai import ai
-from .setup import setup
-
-# 機能をメインCLIに追加
-main.add_command(search)
-main.add_command(aozora)
-main.add_command(add)
-main.add_command(ai)
-main.add_command(setup)
 
 
 @main.command()
@@ -175,20 +175,20 @@ def test_geocoding(place_names: str, with_context: bool):
             for context in test_contexts:
                 result = service.analyze_and_geocode(place_name, context)
                 
-                if result.success:
+                if result and hasattr(result, 'latitude') and hasattr(result, 'longitude'):
                     click.echo(f"   ✅ {context[:30]}... → 🌍 ({result.latitude:.4f}, {result.longitude:.4f})")
-                    click.echo(f"      信頼度: {result.confidence:.2f}, 判定: {result.context_analysis.get('classification', 'N/A')}")
+                    click.echo(f"      信頼度: {result.confidence:.2f}")
                 else:
-                    click.echo(f"   ❌ {context[:30]}... → 失敗: {result.error}")
+                    click.echo(f"   ❌ {context[:30]}... → 失敗: 座標取得できませんでした")
         else:
             # 基本テスト
             result = service.geocode_place_name(place_name)
             
-            if result.success:
+            if result and hasattr(result, 'latitude') and hasattr(result, 'longitude'):
                 click.echo(f"   ✅ 🌍 ({result.latitude:.4f}, {result.longitude:.4f})")
-                click.echo(f"      信頼度: {result.confidence:.2f}, 方法: {result.method}")
+                click.echo(f"      信頼度: {result.confidence:.2f}")
             else:
-                click.echo(f"   ❌ 失敗: {result.error}")
+                click.echo(f"   ❌ 失敗: 座標取得できませんでした")
 
 
 @main.command()

@@ -18,7 +18,7 @@ class DataCollector:
     def __init__(self, db_path: str = "data/bungo_production.db"):
         self.db = init_db(db_path)
         self.wiki_extractor = WikipediaExtractor()
-        self.place_extractor = PlaceExtractor()
+        self.place_extractor = PlaceExtractor(db_path)
         self.ginza_extractor = None  # 遅延初期化
         
     def _get_ginza_extractor(self):
