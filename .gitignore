@@ -82,4 +82,27 @@ cache/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/ 
+$RECYCLE.BIN/
+
+# バックアップファイル
+*.tar.gz
+*.zip
+*.bak
+
+# データベースファイル
+*.db
+*.sqlite
+*.sqlite3
+
+# 環境設定
+.env.*
+!.env.example
+
+# IDE関連
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ログファイル
+*.log 
