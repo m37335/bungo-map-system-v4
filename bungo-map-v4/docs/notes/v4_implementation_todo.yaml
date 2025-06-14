@@ -1,0 +1,433 @@
+# 文豪ゆかり地図システム v4 実装TODOリスト
+# v3からv4への機能移植・拡張計画
+
+metadata:
+  version: "1.0.0"
+  created: "2024-12-19"
+  last_updated: "2024-12-19"
+  total_items: 25
+  estimated_effort: "8-12週間"
+
+# =============================================================================
+# 🔥 HIGH PRIORITY - 緊急実装推奨
+# =============================================================================
+
+high_priority:
+  
+  # 🤖 AI機能システム完全移植
+  ai_system:
+    title: "AI機能システム完全移植"
+    description: "v3のAI地名クリーニング・検証システム（1,144行）をv4に完全移植"
+    priority: "🔥 CRITICAL"
+    estimated_effort: "2-3週間"
+    source_files:
+      - "bungo_map/cli/ai.py (1,144行)"
+      - "bungo_map/ai/cleaners/place_cleaner.py"
+    target_location: "bungo-map-v4/src/ai/"
+    
+    features_to_implement:
+      - command: "ai analyze"
+        description: "地名データ品質分析（信頼度・タイプ分析）"
+        complexity: "高"
+        
+      - command: "ai normalize"
+        description: "地名正規化実行（漢字表記統一等）"
+        complexity: "中"
+        
+      - command: "ai clean"
+        description: "無効地名削除（低信頼度データ除去）"
+        complexity: "中"
+        
+      - command: "ai geocode"
+        description: "AI支援ジオコーディング（Google API統合）"
+        complexity: "高"
+        
+      - command: "ai validate-extraction"
+        description: "地名抽出精度検証システム"
+        complexity: "高"
+        
+      - command: "ai analyze-context"
+        description: "文脈ベース地名分析"
+        complexity: "高"
+        
+      - command: "ai clean-context"
+        description: "文脈判断による無効地名削除"
+        complexity: "高"
+        
+      - command: "ai test-connection"
+        description: "OpenAI API接続テスト"
+        complexity: "低"
+    
+    dependencies:
+      - "OpenAI API統合"
+      - "Google Maps API統合"  
+      - "Rich UI ライブラリ"
+      - "データベース拡張スキーマ"
+    
+    impact: "データ品質向上、自動化、メンテナンス効率化"
+
+  # ✅ 高精度地名抽出器群 (完了)
+  advanced_extractors:
+    title: "高精度地名抽出器群実装"
+    description: "v3の5種類の地名抽出器をv4に完全移植"
+    priority: "✅ COMPLETED"
+    estimated_effort: "2-3週間"
+    completion_date: "2024-12-19"
+    
+    extractors_implemented:
+      - name: "✅ GinzaPlaceExtractor"
+        source: "bungo_map/extractors/ginza_place_extractor.py (200行)"
+        description: "NLP基盤地名抽出（高精度）"
+        implementation: "src/bungo_map/extractors_v4/ginza_place_extractor.py (5.2KB)"
+        test_result: "✅ 4地名抽出成功（東京都新宿区、神奈川県横浜市、札幌市、富士山）"
+        
+      - name: "✅ AdvancedPlaceExtractor"
+        source: "bungo_map/extractors/advanced_place_extractor.py (289行)"
+        description: "複雑地名対応（複合地名・古典地名）"
+        implementation: "src/bungo_map/extractors_v4/advanced_place_extractor.py (8.9KB)"
+        test_result: "✅ 14地名抽出成功（都道府県4、主要都市3、古典地名4、自然地名3）"
+        
+      - name: "✅ PreciseCompoundExtractor"
+        source: "bungo_map/ai/extractors/precise_compound_extractor.py (406行)"
+        description: "AI複合地名抽出（「東京駅前」等）"
+        implementation: "src/bungo_map/ai/extractors/precise_compound_extractor.py (11.3KB)"
+        test_result: "✅ 3複合地名抽出成功（新宿駅前、東京駅周辺、富士山麓）"
+        
+      - name: "✅ EnhancedPlaceExtractor"
+        source: "bungo_map/extractors/enhanced_place_extractor.py (162行)"
+        description: "正規表現強化版地名抽出"
+        implementation: "src/bungo_map/extractors_v4/enhanced_place_extractor.py (9.4KB)"
+        test_result: "✅ 4地名抽出成功（東京都新宿区、鎌倉、北海道、津軽）"
+        
+      - name: "✅ ImprovedPlaceExtractor"
+        source: "bungo_map/extractors/improved_place_extractor.py (263行)"
+        description: "改良版地名抽出（文脈考慮）"
+        implementation: "src/bungo_map/extractors_v4/improved_place_extractor.py (13.9KB)"
+        test_result: "✅ 3地名抽出成功（東京、北海道、津軽）"
+    
+    implementation_summary:
+      total_extractors: "5/5 完了 (100%)"
+      total_code_size: "約48KB"
+      features: "MeCab統合、GiNZA/spaCy NLP、OpenAI API、正規表現強化、文脈分析"
+      fallback_support: "全抽出器でフォールバック機能実装済み"
+    
+    target_location: "bungo-map-v4/src/extractors_v4/ + src/ai/extractors/"
+    impact: "地名抽出精度大幅向上（推定20-30%向上）"
+
+  # 📚 Wikipedia統合システム
+  wikipedia_integration:
+    title: "Wikipedia作者情報自動抽出システム"
+    description: "v3のWikipedia統合機能をv4に完全移植"
+    priority: "🔥 HIGH"
+    estimated_effort: "1-2週間"
+    source_files:
+      - "bungo_map/extractors/wikipedia_extractor.py (368行、18KB)"
+    target_location: "bungo-map-v4/src/wikipedia/"
+    
+    features:
+      - "作者経歴自動取得"
+      - "生没年代自動補完"
+      - "代表作品リスト自動生成"
+      - "Wikipedia URL自動リンク"
+      - "画像・肖像自動取得"
+    
+    impact: "作者データベース完全性向上、手動入力削減"
+
+# =============================================================================
+# ⭐ MEDIUM PRIORITY - 機能拡張
+# =============================================================================
+
+medium_priority:
+
+  # 🛠️ 包括的CLIシステム
+  comprehensive_cli:
+    title: "包括的CLIシステム拡張"
+    description: "v3の豊富なCLI機能をv4に移植・統合"
+    priority: "⭐ MEDIUM"
+    estimated_effort: "2-3週間"
+    
+    current_status: "main.py (106行) のみ実装済み"
+    target_size: "v3レベル：main.py (389行) + 15専用CLI"
+    
+    cli_commands_to_implement:
+      - name: "search"
+        source: "bungo_map/cli/search.py (306行)"
+        description: "地名・作品・作者検索システム"
+        
+      - name: "export" 
+        source: "bungo_map/cli/export.py (205行)"
+        description: "GeoJSON・CSV エクスポート"
+        
+      - name: "expand"
+        source: "bungo_map/cli/expand.py (350行)"
+        description: "データベース拡張（作者・作品追加）"
+        
+      - name: "geocode"
+        source: "bungo_map/cli/geocode.py (154行)"
+        description: "ジオコーディング専用CLI"
+        
+      - name: "aozora"
+        source: "bungo_map/cli/aozora.py (308行)"
+        description: "青空文庫専用処理CLI"
+        
+      - name: "add"
+        source: "bungo_map/cli/add.py (292行)"
+        description: "手動データ追加システム"
+    
+    target_location: "bungo-map-v4/src/cli/"
+
+  # 🔧 高度なテキスト処理
+  advanced_text_processing:
+    title: "高度なテキスト処理システム強化"
+    description: "v3の包括的テキスト処理機能をv4に統合"
+    priority: "⭐ MEDIUM"
+    estimated_effort: "1-2週間"
+    
+    current_status: "基本的なテキストクリーニングのみ"
+    source_files:
+      - "bungo_map/processors/aozora_content_processor.py (569行、21KB)"
+    
+    enhancements_needed:
+      - "複雑なHTMLタグ処理強化"
+      - "ルビタグの詳細解析"
+      - "文書構造保持機能"
+      - "注釈・脚注の適切な処理"
+      - "段落・章構造の認識"
+    
+    target_location: "bungo-map-v4/src/processors/"
+
+  # 📊 統合パイプライン機能強化
+  enhanced_pipeline:
+    title: "統合パイプライン機能強化"
+    description: "v3の完全統合パイプラインをv4に移植"
+    priority: "⭐ MEDIUM"
+    estimated_effort: "1-2週間"
+    
+    current_status: "enhanced_main_pipeline.py で部分統合済み"
+    source_files:
+      - "bungo_map/cli/full_pipeline.py (431行)"
+    
+    missing_features:
+      - "高度なエラーハンドリング"
+      - "詳細な統計レポート生成"
+      - "バッチ処理最適化"
+      - "プログレス表示強化"
+      - "中断・再開機能"
+      - "設定ファイル対応"
+
+# =============================================================================
+# 📈 LOW PRIORITY - 最適化・品質向上
+# =============================================================================
+
+low_priority:
+
+  # 🗄️ データベース最適化
+  database_optimization:
+    title: "データベース最適化システム"
+    description: "v3のDB最適化・クリーンアップ機能を移植"
+    priority: "📈 LOW"
+    estimated_effort: "1週間"
+    
+    source_files:
+      - "bungo_map/cli/optimize_schema.py (297行)"
+      - "bungo_map/cli/cleanup_database.py (127行)"
+    
+    features:
+      - "スキーマ最適化"
+      - "インデックス自動生成・最適化"
+      - "統計更新・メンテナンス"
+      - "データベースクリーンアップ"
+      - "重複データ検出・削除"
+    
+    target_location: "bungo-map-v4/src/database/"
+
+  # 📚 青空文庫処理強化
+  enhanced_aozora_processing:
+    title: "青空文庫処理システム強化"
+    description: "v3の高度な青空文庫機能をv4に統合"
+    priority: "📈 LOW"
+    estimated_effort: "1-2週間"
+    
+    current_status: "基本的な青空文庫処理のみ"
+    source_files:
+      - "bungo_map/extractors/aozora_extractor.py (433行)"
+      - "bungo_map/extractors/aozora_csv_downloader.py (312行)"
+      - "bungo_map/extractors/aozora_search.py (395行)"
+    
+    enhancements:
+      - "作品メタデータ自動取得"
+      - "作品分類・ジャンル判定"
+      - "CSVデータ管理システム"
+      - "高度な検索機能"
+      - "バッチダウンロード"
+
+  # 🔍 正規表現システム強化
+  regex_enhancement:
+    title: "正規表現地名抽出強化"
+    description: "v3の正規表現強化システムを移植"
+    priority: "📈 LOW"
+    estimated_effort: "3-5日"
+    
+    source_files:
+      - "bungo_map/extractors/regex_enhancement.py (177行)"
+      - "bungo_map/extractors/enhanced_regex_patterns.py (91行)"
+    
+    features:
+      - "パターン最適化"
+      - "地名パターン拡張"
+      - "誤抽出削減"
+      - "性能向上"
+
+# =============================================================================
+# 🎯 実装戦略・ロードマップ
+# =============================================================================
+
+implementation_strategy:
+  
+  phase_1_foundation:
+    title: "Phase 1: 基盤システム構築（3-4週間）"
+    duration: "3-4週間"
+    goals:
+      - "AI機能システム完全移植"
+      - "高精度地名抽出器群実装"
+      - "Wikipedia統合システム"
+    
+    deliverables:
+      - "AI CLI完全動作（8コマンド）"
+      - "5種類の地名抽出器統合"
+      - "Wikipedia自動データ補完"
+    
+    success_criteria:
+      - "地名抽出精度20-30%向上"
+      - "データクリーニング自動化"
+      - "作者データベース完全性90%以上"
+
+  phase_2_enhancement:
+    title: "Phase 2: 機能拡張（2-3週間）"
+    duration: "2-3週間"
+    goals:
+      - "包括的CLIシステム構築"
+      - "テキスト処理強化"
+      - "統合パイプライン完成"
+    
+    deliverables:
+      - "15種類のCLIコマンド"
+      - "高度なテキスト処理"
+      - "エラーハンドリング強化"
+
+  phase_3_optimization:
+    title: "Phase 3: 最適化・品質向上（1-2週間）"
+    duration: "1-2週間"
+    goals:
+      - "データベース最適化"
+      - "青空文庫処理強化"
+      - "性能チューニング"
+    
+    deliverables:
+      - "DB最適化ツール"
+      - "バッチ処理高速化"
+      - "メモリ使用量最適化"
+
+# =============================================================================
+# 📋 技術要件・依存関係
+# =============================================================================
+
+technical_requirements:
+  
+  dependencies_to_add:
+    python_packages:
+      - "spacy>=3.4.0"
+      - "ja-ginza>=5.1.0"
+      - "openai>=1.0.0"
+      - "google-maps-services>=4.10.0"
+      - "rich>=13.0.0"
+      - "wikipedia>=1.4.0"
+      - "requests>=2.28.0"
+      - "beautifulsoup4>=4.11.0"
+    
+    api_keys_required:
+      - "OPENAI_API_KEY"
+      - "GOOGLE_MAPS_API_KEY"
+    
+    system_requirements:
+      - "Python 3.8+"
+      - "メモリ: 4GB以上推奨"
+      - "ストレージ: 追加2GB（モデルファイル）"
+
+  file_structure_changes:
+    new_directories:
+      - "bungo-map-v4/src/ai/"
+      - "bungo-map-v4/src/extractors/"
+      - "bungo-map-v4/src/wikipedia/"
+      - "bungo-map-v4/src/cli/"
+      - "bungo-map-v4/src/processors/"
+      - "bungo-map-v4/src/database/"
+    
+    config_files:
+      - "bungo-map-v4/config/extractors.yaml"
+      - "bungo-map-v4/config/ai_settings.yaml"
+      - "bungo-map-v4/config/geocoding.yaml"
+
+# =============================================================================
+# 🎯 成功指標・KPI
+# =============================================================================
+
+success_metrics:
+  
+  performance_targets:
+    extraction_accuracy: "+20-30% 地名抽出精度向上"
+    processing_speed: "バッチ処理速度2倍向上"
+    data_quality: "データ品質スコア90%以上"
+    automation_rate: "手動作業80%削減"
+  
+  feature_completeness:
+    cli_commands: "v3レベル：15+ コマンド"
+    extractors: "6種類の地名抽出器"
+    ai_features: "8種類のAI機能"
+    wikipedia_coverage: "作者情報90%自動補完"
+  
+  maintenance_improvement:
+    error_reduction: "エラー率50%削減"
+    debug_efficiency: "デバッグ時間70%短縮"
+    data_consistency: "データ整合性95%以上"
+
+# =============================================================================
+# ⚠️ リスク・課題
+# =============================================================================
+
+risks_and_challenges:
+  
+  technical_risks:
+    - name: "API依存性"
+      description: "OpenAI・Google Maps API制限・料金"
+      mitigation: "フォールバック機構・キャッシュ機構"
+    
+    - name: "NLPモデル容量"
+      description: "GiNZAモデル（1GB+）のストレージ要件"
+      mitigation: "オンデマンドダウンロード・軽量化"
+    
+    - name: "互換性問題"
+      description: "v3→v4移植時の設計差異"
+      mitigation: "段階的移植・並行テスト"
+  
+  resource_constraints:
+    - "開発時間：8-12週間の連続作業"
+    - "API料金：月額$50-100（開発・テスト）"
+    - "ストレージ：追加2-3GB"
+
+# =============================================================================
+# 📝 注記・補足
+# =============================================================================
+
+notes:
+  current_v4_status: |
+    ✅ 実装済み：基本パイプライン、改良版テキストクリーニング、SimplePlaceExtractor、基本Geocoding、文脈ビューシステム
+    ❌ 未実装：AI機能群、高精度抽出器、Wikipedia統合、包括的CLI、高度テキスト処理
+  
+  migration_priority: |
+    v3の膨大な機能群（2万行超）のうち、コア機能（AI、抽出器、Wikipedia）を優先移植し、
+    段階的にCLI・最適化機能を追加する戦略が効果的。
+  
+  quality_focus: |
+    単純移植ではなく、v4の設計思想に合わせたリファクタリングを行い、
+    保守性・拡張性を向上させることが重要。

@@ -1,0 +1,51 @@
+# 文豪ゆかり地図システム v4.0 設定ファイル
+
+# データベース設定
+database:
+  path: "data/bungo_v4.db"
+  backup_dir: "data/backups"
+  vacuum_after_reset: true
+
+# パイプライン設定
+pipeline:
+  batch_size: 10
+  geocoding_confidence: 0.5
+  quality_threshold: 0.7
+  max_retries: 3
+  timeout: 30
+
+# AI設定
+ai:
+  model: "gpt-4"
+  temperature: 0.7
+  max_tokens: 1000
+  context_window: 2000
+
+# 出力設定
+output:
+  dir: "output"
+  formats:
+    - "geojson"
+    - "csv"
+    - "json"
+  compression: true
+
+# ログ設定
+logging:
+  level: "INFO"
+  file: "logs/bungo_map.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# キャッシュ設定
+cache:
+  enabled: true
+  dir: "cache"
+  ttl: 86400  # 24時間
+
+# 品質管理設定
+quality:
+  min_confidence: 0.5
+  auto_cleanup: true
+  duplicate_threshold: 0.8
+  context_analysis: true 

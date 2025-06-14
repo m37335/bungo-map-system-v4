@@ -1,0 +1,161 @@
+# 現在のフォルダ構成・ファイル構成
+
+## ルート直下
+- `README.md`
+- `LICENSE`
+- `requirements.txt`
+- `pyproject.toml`
+- `Dockerfile`
+- `bungo_map_backup.tar.gz` (アーカイブ)
+
+## `/app/bungo-map-v4/`
+- `src/`
+  - `bungo_map/`
+    - `ai/`
+      - `cleaners/`
+      - `utils/`
+      - `analyzer/`
+      - `geocoder/`
+      - `cleaner/`
+      - `normalizer/`
+      - `validator/`
+      - `extractors/`
+      - `geocoding/`
+      - `analyzers/`
+      - `cli.py`
+      - `enhanced_ai_manager.py`
+      - `__init__.py`
+      - `ai_manager.py`
+    - `cli/`
+      - `tests/`
+      - `__pycache__/`
+      - `comprehensive_cli_backup.py`
+      - `comprehensive_cli.py`
+      - `ai_geocode.py`
+      - `ai_clean.py`
+      - `ai_normalize.py`
+      - `__init__.py`
+      - `ai_validate_extraction.py`
+      - `ai_analyze.py`
+      - `enhanced_ai_cli.py`
+      - `add_cli.py`
+      - `expand_cli.py`
+      - `aozora_cli.py`
+      - `geocode_cli.py`
+      - `export_cli.py`
+      - `search_cli.py`
+      - `v4_manager.py`
+      - `ai_cli.py`
+    - `wikipedia/`
+      - `enhanced_wikipedia_extractor.py`
+      - `wikipedia_data_completion.py`
+      - `wikipedia_extractor.py`
+      - `__init__.py`
+    - `processors/`
+      - `__pycache__/`
+      - `advanced_text_cleaner.py`
+      - `advanced_aozora_processor.py`
+      - `document_structure_analyzer.py`
+      - `aozora_content_processor.py`
+    - `testing/`
+      - `error_resilience_test.py`
+      - `performance_monitor.py`
+      - `integration_test_suite.py`
+    - `extractors_v4/`
+      - `__pycache__/`
+      - `ginza_place_extractor.py`
+      - `advanced_place_extractor.py`
+      - `improved_place_extractor.py`
+      - `enhanced_place_extractor.py`
+      - `__init__.py`
+    - `database/`
+      - `__pycache__/`
+      - `schema_fixed.sql`
+      - `__init__.py`
+      - `schema.sql`
+      - `schema_manager.py`
+      - `models.py`
+      - `migration.py`
+      - `manager.py`
+    - `extractors/`
+      - `__pycache__/`
+      - `sentence_extractor.py`
+      - `wikipedia_extractor.py`
+      - `simple_place_extractor.py`
+      - `regex_enhancement.py`
+      - `improved_place_extractor.py`
+      - `ginza_place_extractor.py`
+      - `enhanced_regex_patterns.py`
+      - `enhanced_place_extractor.py`
+      - `aozora_search.py`
+      - `aozora_extractor.py`
+      - `aozora_csv_downloader.py`
+      - `advanced_place_extractor.py`
+      - `__init__.py`
+      - `place_normalizer.py`
+      - `extraction_pipeline.py`
+    - `core/`
+      - `__pycache__/`
+      - `models.py`
+      - `database.py`
+      - `__init__.py`
+      - `config.py`
+      - `exceptions.py`
+    - `utils/`
+      - `__pycache__/`
+      - `logger.py`
+      - `geojson_exporter.py`
+      - `database_utils.py`
+      - `config.py`
+      - `aozora_text_cleaner.py`
+      - `aozora_client.py`
+      - `__init__.py`
+    - `services/`
+      - `__init__.py`
+      - `analytics_service.py`
+      - `search_service.py`
+    - `api/`
+      - `__init__.py`
+    - `visualization/`
+      - `__init__.py`
+    - `__pycache__/`
+    - `__init__.py`
+  - `cli/` (空ディレクトリ)
+- `tests/`
+  - `fixtures/`
+  - `ai/`
+  - `cli/`
+  - `integration/`
+  - `performance/`
+  - `unit/`
+- `data/`
+  - `aozora_cache/`
+  - `databases/`
+    - `bungo_v4.db` (4.3MB)
+  - `cleanup_state.json`
+  - `bungo_v4_new.db` (88KB)
+  - `bungo_v4_fixed.db` (248KB)
+  - `bungo_v4_export_20250610_145304.csv`
+  - `bungo_v4_complete_export_20250610_145551.csv`
+- `output/`
+  - `bungo_places.geojson` (4.1MB)
+  - `bungo_places.csv` (2.0MB)
+- `config/`
+- `scripts/`
+  - `migration/`
+  - `utilities/`
+- `docs/`
+  - `notes/`
+    - `v4_implementation_todo.yaml`
+    - `current_structure.md`
+  - `reports/`
+    - `PHASE4_ADVANCED_TEXT_PROCESSING_REPORT.md`
+    - `COMPREHENSIVE_CLI_IMPLEMENTATION_REPORT.md`
+  - `api/`
+  - `architecture/`
+  - `tutorials/`
+- `deployment/`
+  - `docker/`
+  - `kubernetes/`
+- `downloads/`
+  - `羅生門.txt` 
