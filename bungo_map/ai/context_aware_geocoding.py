@@ -424,4 +424,17 @@ class ContextAwareGeocodingService:
             'hokkaido_places': len(self.hokkaido_places),
             'foreign_places': len(self.foreign_places)
         })
-        return base_stats 
+        return base_stats
+
+    def geocode_place_name(self, place_name: str, sentence: str = "", before_text: str = "", after_text: str = "") -> Optional[GeocodingResult]:
+        """
+        地名をジオコーディング（既存APIラッパー）
+        Args:
+            place_name: 地名
+            sentence: 文脈（オプション）
+            before_text: 前文脈（オプション）
+            after_text: 後文脈（オプション）
+        Returns:
+            GeocodingResult or None
+        """
+        return self.geocode_place_sync(place_name, sentence, before_text, after_text) 

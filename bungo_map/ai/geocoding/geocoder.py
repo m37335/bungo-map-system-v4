@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass
 
-from .providers import NominatimProvider, GoogleProvider, GeocodingResult
+from .providers import NominatimProvider, GoogleProvider, GeocodingResult, GeocodingResultWrapper
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -85,7 +85,7 @@ class PlaceGeocoder:
         
         return results
     
-    def geocode_place(self, place_record: PlaceRecord) -> Optional[GeocodingResult]:
+    def geocode_place(self, place_record: PlaceRecord) -> GeocodingResultWrapper:
         """単一地名のジオコーディング"""
         # 正規化名を優先使用
         search_name = place_record.ai_normalized_name or place_record.place_name
@@ -96,7 +96,7 @@ class PlaceGeocoder:
         result = self.nominatim.geocode(search_name)
         
         # Google APIが利用可能で、Nominatimで結果が得られなかった場合
-        if not result and self.google:
+        if not result.is_success and self.google:
             logger.info(f"Nominatim失敗、Google APIを試行: {search_name}")
             result = self.google.geocode(search_name)
         
@@ -110,49 +110,47 @@ class PlaceGeocoder:
         places = self.get_places_for_geocoding(min_ai_confidence, limit=limit)
         
         results = {
-            'total_processed': 0,
+            'total': len(places),
             'successful': 0,
             'failed': 0,
             'skipped': 0,
             'results': []
         }
         
-        logger.info(f"ジオコーディング開始: {len(places)}件")
-        
         for place in places:
-            results['total_processed'] += 1
+            logger.info(f"ジオコーディング: {place.place_name}")
             
-            # 架空地名はスキップ
-            if place.ai_place_type == 'fictional':
+            # 既にジオコーディング済みの場合はスキップ
+            if place.current_lat is not None and place.current_lng is not None:
                 results['skipped'] += 1
-                if not dry_run:
-                    self._update_geocoding_status(place.place_id, 'skipped', 'fictional')
+                logger.info(f"スキップ: {place.place_name} (既にジオコーディング済み)")
                 continue
             
             geocoding_result = self.geocode_place(place)
             
-            if geocoding_result:
+            if geocoding_result.is_success:
                 results['successful'] += 1
+                result = geocoding_result.result
                 results['results'].append({
                     'place_id': place.place_id,
                     'place_name': place.place_name,
-                    'latitude': geocoding_result.latitude,
-                    'longitude': geocoding_result.longitude,
-                    'accuracy': geocoding_result.accuracy,
-                    'provider': geocoding_result.provider,
-                    'address': geocoding_result.address
+                    'latitude': result.latitude,
+                    'longitude': result.longitude,
+                    'accuracy': result.accuracy,
+                    'provider': result.provider,
+                    'address': result.address
                 })
                 
                 if not dry_run:
-                    self._save_geocoding_result(place.place_id, geocoding_result)
+                    self._save_geocoding_result(place.place_id, result)
                 
-                logger.info(f"成功: {place.place_name} -> ({geocoding_result.latitude:.6f}, {geocoding_result.longitude:.6f})")
+                logger.info(f"成功: {place.place_name} -> ({result.latitude:.6f}, {result.longitude:.6f})")
             else:
                 results['failed'] += 1
                 if not dry_run:
                     self._update_geocoding_status(place.place_id, 'failed', None)
                 
-                logger.warning(f"失敗: {place.place_name}")
+                logger.warning(f"失敗: {place.place_name} - {geocoding_result.error_message}")
         
         logger.info(f"ジオコーディング完了: 成功 {results['successful']}, 失敗 {results['failed']}, スキップ {results['skipped']}")
         return results
