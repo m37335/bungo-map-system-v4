@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # MeCab辞書の設定
-RUN echo "dicdir = /var/lib/mecab/dic/debian" > /etc/mecabrc
+RUN mkdir -p /usr/local/etc && \
+    echo "dicdir = /var/lib/mecab/dic/debian" > /usr/local/etc/mecabrc && \
+    echo "dicdir = /var/lib/mecab/dic/debian" > /etc/mecabrc
 
 # Pythonの依存関係
 COPY requirements.txt /tmp/requirements.txt
@@ -44,7 +46,8 @@ ENV BUNGO_CACHE_DIR="/app/cache"
 
 # 非rootユーザー作成
 RUN useradd -m -u 1000 developer && \
-    chown -R developer:developer /app
+    chown -R developer:developer /app && \
+    chown -R developer:developer /usr/local/etc/mecabrc /etc/mecabrc
 USER developer
 
 # デフォルトコマンド
