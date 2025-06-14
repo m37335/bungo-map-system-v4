@@ -115,6 +115,10 @@ class EnhancedPlaceExtractor:
         
         return simple_places
 
+    def extract_places_from_text(self, work_id: int, text: str, aozora_url: str = None):
+        """extract_places_from_workのラッパー。テスト互換用。"""
+        return self.extract_places_from_work(work_id, text)
+
 # テスト用関数
 def test_enhanced_extractor():
     """強化版抽出器のテスト"""
