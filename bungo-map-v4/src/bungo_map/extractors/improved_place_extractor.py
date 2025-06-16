@@ -7,7 +7,7 @@
 
 import re
 from typing import List, Dict, Set, Tuple
-from bungo_map.core.models import Place
+from ..database.models import PlaceMaster as Place
 
 class ImprovedPlaceExtractor:
     """重複抽出を防ぐ改良された地名抽出器"""

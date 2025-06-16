@@ -14,8 +14,8 @@ from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 
 # v3.0抽出器を利用（統合後のパス）
-from bungo_map.extractors.simple_place_extractor import SimplePlaceExtractor
-from bungo_map.extractors.enhanced_place_extractor import EnhancedPlaceExtractor
+from .simple_place_extractor import SimplePlaceExtractor
+from .enhanced_place_extractor import EnhancedPlaceExtractor
 
 
 @dataclass

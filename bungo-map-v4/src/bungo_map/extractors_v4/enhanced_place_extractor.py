@@ -82,31 +82,26 @@ class EnhancedPlaceExtractor:
             }
         ]
     
-    def extract_places(self, work_id: int, text: str, aozora_url: str = "") -> List[EnhancedPlace]:
+    def extract_places(self, text: str) -> List[EnhancedPlace]:
         """テキストから地名を抽出（メイン機能）"""
         if not text or len(text) < 10:
             logger.warning(f"テキストが短すぎます: {len(text)}文字")
             return []
-        
         all_matches = []
         sentences = self._split_into_sentences(text)
-        
         logger.info(f"📄 文数: {len(sentences)}, 文字数: {len(text)}")
-        
         for sentence_idx, sentence in enumerate(sentences):
             sentence_matches = self._extract_from_sentence(
                 sentence, sentence_idx, sentences
             )
-            
             # 重複排除処理
             deduplicated_matches = self._deduplicate_overlapping_matches(sentence_matches)
             all_matches.extend(deduplicated_matches)
-        
         # EnhancedPlaceオブジェクトに変換
         places = []
         for match in all_matches:
             place = EnhancedPlace(
-                work_id=work_id,
+                work_id=0,  # work_idは使わない
                 place_name=match['text'],
                 sentence=match['sentence'],
                 before_text=match['before_text'][:300],
@@ -115,10 +110,9 @@ class EnhancedPlaceExtractor:
                 char_position=match.get('start', 0),
                 confidence=match['confidence'],
                 extraction_method=f"enhanced_{match['category']}",
-                aozora_url=aozora_url
+                aozora_url=""
             )
             places.append(place)
-        
         logger.info(f"✅ 地名抽出完了: {len(places)}件")
         return places
     
@@ -192,7 +186,7 @@ class EnhancedPlaceExtractor:
         """抽出機能のテスト"""
         logger.info("🧪 Enhanced Place Extractor テスト開始")
         
-        places = self.extract_places(999, test_text)
+        places = self.extract_places(test_text)
         
         # 統計作成
         categories = {}

@@ -86,22 +86,13 @@ class GinzaPlaceExtractor:
             '江戸', '京', '大和', '武蔵', '相模', '津軽', '陸奥'
         }
     
-    def extract_places_ginza(self, work_id: int, text: str, aozora_url: str = "") -> List[GinzaPlace]:
-        """GiNZAを使った高精度地名抽出（メイン機能）"""
+    def extract_places(self, text: str) -> List[GinzaPlace]:
+        """テキストから地名を抽出（メイン機能）"""
         if not text or len(text) < 10:
             logger.warning(f"テキストが短すぎます: {len(text)}文字")
             return []
-        
-        places = []
-        
-        if self.nlp:
-            places = self._extract_with_ginza(work_id, text, aozora_url)
-            logger.info(f"📊 GiNZA抽出: {len(places)}件")
-        else:
-            # フォールバック機能
-            places = self._extract_fallback(work_id, text, aozora_url)
-            logger.info(f"📊 フォールバック抽出: {len(places)}件")
-        
+        # work_idやaozora_urlは使わず、textのみで抽出
+        places = self._extract_with_ginza(0, text, "") if self.nlp else self._extract_fallback(0, text, "")
         logger.info(f"✅ GiNZA地名抽出完了: {len(places)}件")
         return places
     
@@ -296,7 +287,7 @@ class GinzaPlaceExtractor:
         """抽出機能のテスト"""
         logger.info("🧪 GiNZA Place Extractor テスト開始")
         
-        places = self.extract_places_ginza(999, test_text)
+        places = self.extract_places(test_text)
         
         # 統計作成
         categories = {}

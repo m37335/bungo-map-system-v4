@@ -1,0 +1,39 @@
+{
+    "places": [
+        {
+            "name": "東京",
+            "type": "city",
+            "coordinates": {
+                "latitude": 35.6762,
+                "longitude": 139.6503
+            },
+            "metadata": {
+                "source": "青空文庫",
+                "confidence": 0.95
+            }
+        },
+        {
+            "name": "京都",
+            "type": "city",
+            "coordinates": {
+                "latitude": 35.0116,
+                "longitude": 135.7681
+            },
+            "metadata": {
+                "source": "青空文庫",
+                "confidence": 0.92
+            }
+        }
+    ],
+    "texts": [
+        {
+            "id": "text1",
+            "title": "テスト小説1",
+            "author": "テスト作者1",
+            "places": [
+                "東京",
+                "京都"
+            ]
+        }
+    ]
+}

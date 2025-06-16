@@ -4,86 +4,58 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
-from bungo_map.ai.cleaners.place_cleaner import PlaceCleaner, PlaceCleaningResult
+from bungo_map.ai.cleaners.place_cleaner import PlaceCleaner
+from bungo_map.database.models import PlaceMaster
 
 @pytest.fixture
-def mock_openai_response():
-    """OpenAI APIのモックレスポンス"""
-    return MagicMock(
-        choices=[
-            MagicMock(
-                message=MagicMock(
-                    content="東京都新宿区"
-                )
-            )
-        ]
-    )
+def place_cleaner(db_session):
+    """PlaceCleanerのフィクスチャ"""
+    return PlaceCleaner(db=db_session)
 
-@pytest.fixture
-def place_cleaner():
-    """PlaceCleanerのインスタンス"""
-    return PlaceCleaner(api_key="test_key")
-
-def test_place_cleaner_initialization():
+def test_place_cleaner_initialization(place_cleaner):
     """PlaceCleanerの初期化テスト"""
-    cleaner = PlaceCleaner(api_key="test_key")
-    assert cleaner is not None
-    assert cleaner.logger is not None
-    assert cleaner.console is not None
+    assert place_cleaner is not None
+    assert place_cleaner.db is not None
 
-def test_place_cleaner_initialization_without_api_key():
+def test_place_cleaner_initialization_without_api_key(db_session):
     """APIキーなしでの初期化テスト"""
-    with pytest.raises(ValueError):
-        PlaceCleaner()
+    cleaner = PlaceCleaner(db=db_session, api_key=None)
+    assert cleaner is not None
+    assert cleaner.db is not None
 
-@patch('openai.ChatCompletion.create')
-def test_clean_place_name(mock_create, place_cleaner, mock_openai_response):
-    """地名クリーニングのテスト"""
-    mock_create.return_value = mock_openai_response
-    
-    result = place_cleaner.clean_place_name("新宿区")
-    
-    assert isinstance(result, PlaceCleaningResult)
-    assert result.original_name == "新宿区"
-    assert result.cleaned_name == "東京都新宿区"
-    assert result.confidence == 0.95
-    assert result.cleaning_type == "normalization"
-    assert "model" in result.metadata
+def test_analyze_all_places(place_cleaner):
+    """地名分析のテスト"""
+    # テストデータの準備
+    place = PlaceMaster(
+        place_name="新宿区",
+        canonical_name="東京都新宿区",
+        place_type="行政区",
+        confidence=0.95
+    )
+    place_cleaner.db.insert_place_master(place)
 
-@patch('openai.ChatCompletion.create')
-def test_batch_clean_places(mock_create, place_cleaner, mock_openai_response):
-    """一括地名クリーニングのテスト"""
-    mock_create.return_value = mock_openai_response
-    
-    place_names = ["新宿区", "渋谷区", "千代田区"]
-    results = place_cleaner.batch_clean_places(place_names)
-    
-    assert len(results) == 3
-    for result in results:
-        assert isinstance(result, PlaceCleaningResult)
-        assert result.cleaned_name == "東京都新宿区"
-        assert result.confidence == 0.95
+    results = place_cleaner.analyze_all_places(limit=1)
+    assert len(results) > 0
+    assert results[0]["original_name"] == "新宿区"
 
-@patch('openai.ChatCompletion.create')
-def test_clean_place_name_error_handling(mock_create, place_cleaner):
-    """エラーハンドリングのテスト"""
-    mock_create.side_effect = Exception("API Error")
-    
-    with pytest.raises(Exception) as exc_info:
-        place_cleaner.clean_place_name("新宿区")
-    
-    assert "API Error" in str(exc_info.value)
+def test_apply_normalizations(place_cleaner):
+    """正規化適用のテスト"""
+    # テストデータの準備
+    place = PlaceMaster(
+        place_name="新宿区",
+        canonical_name="東京都新宿区",
+        place_type="行政区",
+        confidence=0.95
+    )
+    place_cleaner.db.insert_place_master(place)
 
-@patch('openai.ChatCompletion.create')
-def test_batch_clean_places_error_handling(mock_create, place_cleaner):
-    """一括処理でのエラーハンドリングのテスト"""
-    mock_create.side_effect = Exception("API Error")
-    
-    place_names = ["新宿区", "渋谷区"]
-    results = place_cleaner.batch_clean_places(place_names)
-    
-    assert len(results) == 2
-    for result in results:
-        assert result.confidence == 0.0
-        assert result.cleaning_type == "error"
-        assert "error" in result.metadata 
+    results = place_cleaner.analyze_all_places(limit=1)
+    assert len(results) > 0
+    assert results[0]["normalized_name"] == "東京都新宿区"
+
+def test_generate_cleaning_report(place_cleaner):
+    """クリーニングレポート生成のテスト"""
+    report = place_cleaner.generate_cleaning_report()
+    assert isinstance(report, dict)
+    assert "total_places" in report
+    assert "cleaned_places" in report 

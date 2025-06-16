@@ -13,7 +13,7 @@ from dataclasses import dataclass
 @dataclass
 class DatabaseConfig:
     """データベース設定"""
-    path: str = "../../data/bungo_v4.db"
+    path: str = "../../data/databases/bungo_v4.db"
     backup_path: str = "../../data/backups"
     migration_path: str = "src/bungo_map/database/migrations"
     
@@ -49,7 +49,7 @@ class Config:
     
     def __init__(self, config_path: Optional[str] = None):
         self.config_path = config_path
-        self.project_root = Path(__file__).parent.parent.parent.parent
+        self.project_root = Path(__file__).parent.parent.parent.parent.parent
         
         # 設定初期化
         self.database = DatabaseConfig()

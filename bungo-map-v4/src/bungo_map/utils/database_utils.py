@@ -19,10 +19,7 @@ def get_database_path() -> str:
     
     # デフォルトパスを試行
     default_paths = [
-        'data/bungo_production.db',
-        'data/bungo_map.db',
-        '../data/bungo_production.db',
-        '../data/bungo_map.db'
+        '/app/bungo-map-v4/data/databases/bungo_v4.db'
     ]
     
     for path in default_paths:

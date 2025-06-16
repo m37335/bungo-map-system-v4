@@ -14,7 +14,7 @@ import time
 import json
 from datetime import datetime
 
-from bungo_map.core.models import Author, Work
+from ..database.models import Author, Work
 
 
 class WikipediaExtractor:

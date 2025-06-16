@@ -24,6 +24,7 @@ class Sentence:
     chapter: Optional[str] = None
     page_number: Optional[int] = None
     position_in_work: Optional[int] = None
+    sentence_length: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
@@ -40,6 +41,7 @@ class Sentence:
             'chapter': self.chapter,
             'page_number': self.page_number,
             'position_in_work': self.position_in_work,
+            'sentence_length': self.sentence_length,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -155,6 +157,98 @@ class SentencePlace:
         }
 
 
+@dataclass
+class Author:
+    """作者モデル"""
+    author_id: Optional[int] = None
+    author_name: str = ""
+    author_name_kana: Optional[str] = None
+    birth_year: Optional[int] = None
+    death_year: Optional[int] = None
+    birth_place: Optional[str] = None
+    death_place: Optional[str] = None
+    period: Optional[str] = None
+    major_works: Optional[str] = None
+    wikipedia_url: Optional[str] = None
+    description: Optional[str] = None
+    portrait_url: Optional[str] = None
+    works_count: Optional[int] = 0
+    total_sentences: Optional[int] = 0
+    source_system: Optional[str] = None
+    verification_status: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'author_id': self.author_id,
+            'author_name': self.author_name,
+            'author_name_kana': self.author_name_kana,
+            'birth_year': self.birth_year,
+            'death_year': self.death_year,
+            'birth_place': self.birth_place,
+            'death_place': self.death_place,
+            'period': self.period,
+            'major_works': self.major_works,
+            'wikipedia_url': self.wikipedia_url,
+            'description': self.description,
+            'portrait_url': self.portrait_url,
+            'works_count': self.works_count,
+            'total_sentences': self.total_sentences,
+            'source_system': self.source_system,
+            'verification_status': self.verification_status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+@dataclass
+class Work:
+    """作品モデル"""
+    work_id: Optional[int] = None
+    work_title: str = ""
+    author_id: int = 0
+    publication_year: Optional[int] = None
+    genre: Optional[str] = None
+    aozora_url: Optional[str] = None
+    file_path: Optional[str] = None
+    content_length: Optional[int] = 0
+    sentence_count: Optional[int] = 0
+    place_count: Optional[int] = 0
+    aozora_work_id: Optional[str] = None
+    card_id: Optional[str] = None
+    copyright_status: Optional[str] = None
+    input_person: Optional[str] = None
+    proof_person: Optional[str] = None
+    source_system: Optional[str] = None
+    processing_status: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'work_id': self.work_id,
+            'work_title': self.work_title,
+            'author_id': self.author_id,
+            'publication_year': self.publication_year,
+            'genre': self.genre,
+            'aozora_url': self.aozora_url,
+            'file_path': self.file_path,
+            'content_length': self.content_length,
+            'sentence_count': self.sentence_count,
+            'place_count': self.place_count,
+            'aozora_work_id': self.aozora_work_id,
+            'card_id': self.card_id,
+            'copyright_status': self.copyright_status,
+            'input_person': self.input_person,
+            'proof_person': self.proof_person,
+            'source_system': self.source_system,
+            'processing_status': self.processing_status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
 class DatabaseConnection:
     """v4.0データベース接続管理"""
     
@@ -185,6 +279,7 @@ def row_to_sentence(row: sqlite3.Row) -> Sentence:
         chapter=row['chapter'],
         page_number=row['page_number'],
         position_in_work=row['position_in_work'],
+        sentence_length=row['sentence_length'],
         created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
         updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
     )

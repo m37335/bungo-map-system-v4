@@ -8,8 +8,8 @@ GiNZAが利用できない環境でも動作する地名抽出機能
 import re
 import logging
 from typing import List, Dict, Optional, Tuple
-from bungo_map.core.models import Place
-from bungo_map.utils.aozora_text_cleaner import clean_aozora_sentence
+from ..database.models import PlaceMaster as Place
+from ..utils.aozora_text_cleaner import clean_aozora_sentence
 
 
 class SimplePlaceExtractor:

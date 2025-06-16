@@ -12,6 +12,8 @@ import sys
 import os
 import requests
 from pathlib import Path
+import unicodedata
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -51,58 +53,38 @@ def search(ctx, query, search_type, limit, detailed):
     click.echo(f"🔍 青空文庫検索: '{query}'")
     click.echo(f"   検索対象: {search_type}")
     
-    # サンプル検索結果
-    sample_results = [
-        {
-            'work_id': '43',
-            'title': '羅生門',
-            'author': '芥川龍之介',
-            'first_published': '1915',
-            'aozora_url': 'https://www.aozora.gr.jp/cards/000879/files/127_15260.html',
-            'file_size': '24KB',
-            'last_modified': '2004-02-17'
-        },
-        {
-            'work_id': '752',
-            'title': '坊っちゃん',
-            'author': '夏目漱石',
-            'first_published': '1906',
-            'aozora_url': 'https://www.aozora.gr.jp/cards/000148/files/752_14964.html',
-            'file_size': '89KB',
-            'last_modified': '2003-11-14'
-        },
-        {
-            'work_id': '645',
-            'title': '舞姫',
-            'author': '森鴎外',
-            'first_published': '1890',
-            'aozora_url': 'https://www.aozora.gr.jp/cards/000129/files/645_5247.html',
-            'file_size': '45KB',
-            'last_modified': '2004-01-15'
+    try:
+        # 青空文庫APIのエンドポイント
+        base_url = "https://www.aozora.gr.jp/api/v1"
+        
+        # 検索パラメータの設定
+        params = {
+            'query': query,
+            'type': search_type,
+            'limit': limit
         }
-    ]
-    
-    # フィルタリング
-    if search_type == 'title':
-        filtered_results = [r for r in sample_results if query.lower() in r['title'].lower()]
-    elif search_type == 'author':
-        filtered_results = [r for r in sample_results if query.lower() in r['author'].lower()]
-    else:  # both
-        filtered_results = [r for r in sample_results if 
-                          query.lower() in r['title'].lower() or 
-                          query.lower() in r['author'].lower()]
-    
-    filtered_results = filtered_results[:limit]
-    
-    # 結果表示
-    if not filtered_results:
-        click.echo("   ❌ 該当する作品が見つかりませんでした")
-        return
-    
-    if RICH_AVAILABLE:
-        _display_search_results_rich(filtered_results, query, detailed)
-    else:
-        _display_search_results_simple(filtered_results, detailed)
+        
+        # APIリクエスト
+        response = requests.get(f"{base_url}/search", params=params)
+        response.raise_for_status()
+        
+        # 結果の取得
+        results = response.json()
+        
+        if not results:
+            click.echo("   ❌ 該当する作品が見つかりませんでした")
+            return
+        
+        # 結果の表示
+        if RICH_AVAILABLE:
+            _display_search_results_rich(results, query, detailed)
+        else:
+            _display_search_results_simple(results, detailed)
+            
+    except requests.exceptions.RequestException as e:
+        click.echo(f"   ❌ APIリクエストエラー: {e}")
+    except Exception as e:
+        click.echo(f"   ❌ エラー: {e}")
 
 @aozora.command()
 @click.argument('work_id', required=True)
@@ -116,35 +98,26 @@ def download(ctx, work_id, output_dir, dl_format, extract_places):
     click.echo(f"   出力先: {output_dir}")
     click.echo(f"   形式: {dl_format}")
     
-    # ダウンロード先ディレクトリ作成
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    # サンプル作品情報
-    work_info = {
-        'work_id': work_id,
-        'title': '羅生門',
-        'author': '芥川龍之介',
-        'url': 'https://www.aozora.gr.jp/cards/000879/files/127_15260.html',
-        'file_size': '24KB'
-    }
-    
-    # ダウンロード実行（シミュレーション）
-    if RICH_AVAILABLE:
-        with Progress() as progress:
-            task = progress.add_task(f"ダウンロード中: {work_info['title']}", total=100)
-            
-            for i in range(100):
-                progress.update(task, advance=1)
-                import time
-                time.sleep(0.01)  # ダウンロードシミュレーション
-    else:
-        click.echo("   📥 ダウンロード中...")
-    
-    # ファイル保存（サンプル）
-    if dl_format in ['html', 'both']:
-        html_file = output_path / f"{work_info['title']}.html"
-        html_content = f"""<!DOCTYPE html>
+    try:
+        # ダウンロード先ディレクトリ作成
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # 作品情報の取得
+        base_url = "https://www.aozora.gr.jp/api/v1"
+        work_response = requests.get(f"{base_url}/works/{work_id}")
+        work_response.raise_for_status()
+        work_info = work_response.json()
+        
+        # テキストデータの取得
+        text_response = requests.get(f"{base_url}/works/{work_id}/text")
+        text_response.raise_for_status()
+        text_content = text_response.text
+        
+        # ファイル保存
+        if dl_format in ['html', 'both']:
+            html_file = output_path / f"{work_info['title']}.html"
+            html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -153,40 +126,34 @@ def download(ctx, work_id, output_dir, dl_format, extract_places):
 <body>
     <h1>{work_info['title']}</h1>
     <h2>{work_info['author']}</h2>
-    <p>ある日の暮方の事である。一人の下人が、羅生門の下で雨やみを待っていた。</p>
-    <p>（青空文庫テキストの内容がここに続く...）</p>
+    <div class="content">
+        {text_content}
+    </div>
 </body>
 </html>"""
+            
+            with open(html_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
         
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-    
-    if dl_format in ['text', 'both']:
-        text_file = output_path / f"{work_info['title']}.txt"
-        text_content = f"""羅生門
-芥川龍之介
-
-ある日の暮方の事である。一人の下人が、羅生門の下で雨やみを待っていた。
-
-広い羅生門の下には、この男の外に誰もいない。ただ、所々丹塗の剥げた、
-大きな円柱に、蟋蟀が一匹とまっている。羅生門が、朱雀大路にある以上は、
-この男の外にも、雨やみをする市女笠や揉烏帽子が、もう二三人はありそうなものである。
-それが、この男の外には誰もいない。
-
-（テキスト内容が続く...）
-"""
+        if dl_format in ['text', 'both']:
+            text_file = output_path / f"{work_info['title']}.txt"
+            with open(text_file, 'w', encoding='utf-8') as f:
+                f.write(text_content)
         
-        with open(text_file, 'w', encoding='utf-8') as f:
-            f.write(text_content)
-    
-    click.echo(f"✅ ダウンロード完了")
-    click.echo(f"   保存先: {output_path}")
-    
-    if extract_places:
-        click.echo(f"\n🗺️ 地名抽出実行中...")
-        # 地名抽出処理をここで実行
-        extracted_places = ['羅生門', '朱雀大路', '京都']
-        click.echo(f"   抽出された地名: {', '.join(extracted_places)}")
+        click.echo(f"✅ ダウンロード完了")
+        click.echo(f"   保存先: {output_path}")
+        
+        if extract_places:
+            click.echo(f"\n🗺️ 地名抽出実行中...")
+            # 地名抽出処理をここで実行
+            from ..extractors.place_extractor import extract_places
+            extracted_places = extract_places(text_content)
+            click.echo(f"   抽出された地名: {', '.join(extracted_places)}")
+            
+    except requests.exceptions.RequestException as e:
+        click.echo(f"   ❌ APIリクエストエラー: {e}")
+    except Exception as e:
+        click.echo(f"   ❌ エラー: {e}")
 
 @aozora.command()
 @click.option('--input-file', type=click.Path(exists=True), help='作品IDリストファイル')
@@ -420,6 +387,71 @@ def stats(ctx):
         click.echo(f"\n👤 著者別統計 TOP3:")
         for author in stats_data['top_authors']:
             click.echo(f"   {author['name']}: {author['works']}作品, {author['places']}地名")
+
+@aozora.command()
+@click.option('--author', required=True, help='作家名（例：梶井 基次郎）')
+@click.option('--output-dir', default='downloads', help='ダウンロード先ディレクトリ')
+@click.pass_context
+def get_works(ctx, author, output_dir):
+    """指定作家の全作品XHTMLをダウンロード"""
+    import time
+    base_url = "https://www.aozora.gr.jp"
+    author_list_url = f"{base_url}/index_pages/person_all.html"
+    click.echo(f"🔍 作家リストから『{author}』を検索中...")
+    res = requests.get(author_list_url)
+    res.encoding = 'shift_jis'
+    soup = BeautifulSoup(res.text, 'html.parser')
+    author_url = None
+    for link in soup.find_all('a'):
+        raw = link.text
+        stripped = raw.strip()
+        normalized = unicodedata.normalize('NFKC', stripped)
+        print(f"[DEBUG] raw: '{raw}' | stripped: '{stripped}' | normalized: '{normalized}'")
+        if normalized == author:
+            author_url = base_url + link.get('href')
+            break
+    if not author_url:
+        click.echo(f"❌ 作家『{author}』が見つかりませんでした")
+        return
+    click.echo(f"✅ 作家ページ: {author_url}")
+    # 作家ページから作品リスト取得
+    res = requests.get(author_url)
+    res.encoding = 'shift_jis'
+    soup = BeautifulSoup(res.text, 'html.parser')
+    works = []
+    for tr in soup.select('table.list tr')[1:]:
+        tds = tr.find_all('td')
+        if len(tds) < 2:
+            continue
+        title = tds[1].get_text(strip=True)
+        xhtml_link = None
+        for a in tds[1].find_all('a'):
+            href = a.get('href')
+            if href and href.endswith('.html'):
+                xhtml_link = base_url + href
+                break
+        if xhtml_link:
+            works.append({'title': title, 'xhtml_url': xhtml_link})
+    if not works:
+        click.echo(f"❌ 作品リストが取得できませんでした")
+        return
+    click.echo(f"📚 作品数: {len(works)} 件")
+    # ダウンロード
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    for i, work in enumerate(works, 1):
+        safe_title = work['title'].replace('/', '_').replace(' ', '_')
+        file_path = output_path / f"{safe_title}.html"
+        click.echo(f"[{i}/{len(works)}] ⬇ {work['title']} ...")
+        try:
+            wres = requests.get(work['xhtml_url'])
+            wres.encoding = 'shift_jis'
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(wres.text)
+            time.sleep(1)  # サーバー負荷軽減
+        except Exception as e:
+            click.echo(f"   ❌ ダウンロード失敗: {e}")
+    click.echo(f"✅ 全作品ダウンロード完了: {output_path}")
 
 def _display_search_results_rich(results: List[Dict], query: str, detailed: bool):
     """Rich UI検索結果表示"""

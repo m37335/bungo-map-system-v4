@@ -20,35 +20,18 @@ def read_requirements():
     return requirements
 
 setup(
-    name="bungo-map",
-    version="2.0.0",
-    description="文豪ゆかり地図システム - 作家・作品・舞台地名の3階層データ管理システム",
-    long_description=open('README.md', 'r', encoding='utf-8').read(),
-    long_description_content_type="text/markdown",
-    author="Masa",
-    author_email="masa@example.com",
-    url="https://github.com/masa/bungo-map",
-    packages=find_packages(),
-    package_data={
-        'bungo_map': ['**/*.sql', '**/*.json', '**/*.yaml'],
-    },
-    include_package_data=True,
-    install_requires=read_requirements(),
-    extras_require={
-        'dev': [
-            'pytest>=7.0.0',
-            'black>=22.0.0',
-            'flake8>=5.0.0',
-            'mypy>=0.991',
-            'isort>=5.10.0',
-            'coverage>=6.0.0',
-            'pytest-cov>=3.0.0',
-        ]
-    },
+    name="bungo_map",
+    version="0.1.0",
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    install_requires=[
+        "requests",
+        "beautifulsoup4",
+        "click",
+    ],
     entry_points={
-        'console_scripts': [
-            'bungo=bungo_map.cli.main:main',
-            'bungo-server=bungo_map.api.server:main',
+        "console_scripts": [
+            "aozora-scraper=bungo_map.cli.commands:cli",
         ],
     },
     python_requires='>=3.10',

@@ -227,6 +227,34 @@ class AIManager:
             }
         }
 
+    def analyze(self, data):
+        """ダミー: 地名データ分析"""
+        return f"分析結果: {data}"
+
+    def normalize(self, data):
+        """ダミー: 地名正規化"""
+        return f"正規化結果: {data}"
+
+    def clean(self, data):
+        """ダミー: 地名クリーニング"""
+        return f"クリーニング結果: {data}"
+
+    def geocode(self, data):
+        """ダミー: ジオコーディング"""
+        return f"ジオコーディング結果: {data}"
+
+    def validate_extraction(self, data):
+        """ダミー: 抽出精度検証"""
+        return f"抽出精度検証結果: {data}"
+
+    def analyze_context(self, data):
+        """ダミー: 文脈ベース地名分析"""
+        return f"文脈分析結果: {data}"
+
+    def clean_context(self, data):
+        """ダミー: 文脈クリーニング"""
+        return f"文脈クリーニング結果: {data}"
+
 if __name__ == "__main__":
     # テスト実行
     manager = AIManager()

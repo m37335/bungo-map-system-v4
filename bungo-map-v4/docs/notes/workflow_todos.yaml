@@ -1,0 +1,73 @@
+workflow_todos:
+  main_pipeline:
+    - name: メインパイプラインの統合
+      tasks:
+        - 青空文庫クライアントの統合
+        - テキストクリーニングの統合
+        - 地名抽出パイプラインの統合
+        - ジオコーディングの統合
+      priority: high
+      status: pending
+
+  data_flow:
+    - name: データフローの最適化
+      tasks:
+        - データベーススキーマの更新
+        - キャッシュ機構の実装
+        - エラーハンドリングの強化
+      priority: high
+      status: pending
+
+  cli_interface:
+    - name: CLIインターフェースの改善
+      tasks:
+        - コマンドライン引数の整理
+        - 進捗表示の改善
+        - エラーメッセージの日本語化
+      priority: medium
+      status: pending
+
+  testing:
+    - name: テストカバレッジの向上
+      tasks:
+        - 統合テストの追加
+        - パフォーマンステストの実装
+        - エッジケースのテスト追加
+      priority: medium
+      status: pending
+
+  documentation:
+    - name: ドキュメントの整備
+      tasks:
+        - ワークフローの図解作成
+        - API仕様書の更新
+        - 使用例の追加
+      priority: low
+      status: pending
+
+  performance:
+    - name: パフォーマンス最適化
+      tasks:
+        - 並列処理の導入
+        - メモリ使用量の最適化
+        - データベースクエリの最適化
+      priority: medium
+      status: pending
+
+  error_handling:
+    - name: エラー処理の強化
+      tasks:
+        - リトライ機構の実装
+        - エラーログの改善
+        - 回復処理の実装
+      priority: high
+      status: pending
+
+  monitoring:
+    - name: モニタリング機能の追加
+      tasks:
+        - 処理進捗の可視化
+        - リソース使用量の監視
+        - アラート機能の実装
+      priority: low
+      status: pending 

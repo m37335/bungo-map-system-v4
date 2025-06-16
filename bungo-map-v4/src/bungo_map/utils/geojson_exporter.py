@@ -10,21 +10,20 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-from bungo_map.core.database import Database
-from bungo_map.core.models import Author, Work, Place
+from ..database.models import Author, Work, PlaceMaster as Place
 
 
 class GeoJSONExporter:
     """GeoJSONエクスポートクラス"""
     
-    def __init__(self, db: Database):
-        self.db = db
+    def __init__(self, db_manager):
+        self.db_manager = db_manager
     
     def get_places_with_metadata(self) -> List[Dict[str, Any]]:
         """座標付き地名データを作者・作品情報と共に取得"""
         places_data = []
         
-        with self.db.get_connection() as conn:
+        with self.db_manager.get_connection() as conn:
             query = """
             SELECT 
                 p.place_id, p.work_id, p.place_name, p.lat, p.lng,

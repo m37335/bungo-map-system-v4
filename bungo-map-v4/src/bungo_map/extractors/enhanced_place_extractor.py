@@ -15,8 +15,8 @@ import logging
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 
-from bungo_map.processors.aozora_content_processor import AozoraContentProcessor
-from bungo_map.extractors.simple_place_extractor import SimplePlaceExtractor
+from ..processors.aozora_content_processor import AozoraContentProcessor
+from .simple_place_extractor import SimplePlaceExtractor
 
 logger = logging.getLogger(__name__)
 

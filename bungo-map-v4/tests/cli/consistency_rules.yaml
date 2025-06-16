@@ -1,0 +1,39 @@
+rules:
+  - name: "地名の一貫性チェック"
+    description: "テキスト内の地名がplacesに存在することを確認"
+    type: "reference_check"
+    source: "texts.places"
+    target: "places.name"
+    severity: "error"
+
+  - name: "座標の妥当性チェック"
+    description: "座標が有効な範囲内にあることを確認"
+    type: "range_check"
+    field: "places.coordinates"
+    rules:
+      latitude:
+        min: -90
+        max: 90
+      longitude:
+        min: -180
+        max: 180
+    severity: "error"
+
+  - name: "信頼度スコアチェック"
+    description: "信頼度スコアが0から1の間であることを確認"
+    type: "range_check"
+    field: "places.metadata.confidence"
+    rules:
+      min: 0
+      max: 1
+    severity: "warning"
+
+  - name: "必須フィールドチェック"
+    description: "必須フィールドが存在することを確認"
+    type: "required_fields"
+    fields:
+      - "places.name"
+      - "places.type"
+      - "places.coordinates"
+      - "places.metadata"
+    severity: "error" 

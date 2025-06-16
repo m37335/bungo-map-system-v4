@@ -103,28 +103,22 @@ class AdvancedPlaceExtractor:
             '一般名詞': {'人', '物', '事', '者', '家', '屋', '店', '場', '所'}
         }
     
-    def extract_places_combined(self, work_id: int, text: str, aozora_url: str = "") -> List[AdvancedPlace]:
-        """MeCab + 正規表現の統合抽出（メイン機能）"""
+    def extract_places(self, text: str) -> List[AdvancedPlace]:
+        """テキストから地名を抽出（メイン機能）"""
         if not text or len(text) < 10:
             logger.warning(f"テキストが短すぎます: {len(text)}文字")
             return []
-        
+        # work_idやaozora_urlは使わず、textのみで抽出
         all_places = []
-        
-        # MeCab抽出（利用可能な場合）
-        if self.tagger:
-            mecab_places = self._extract_places_mecab(work_id, text, aozora_url)
-            all_places.extend(mecab_places)
-            logger.info(f"📊 MeCab抽出: {len(mecab_places)}件")
-        
         # 正規表現抽出
-        regex_places = self._extract_places_regex(work_id, text, aozora_url)
+        regex_places = self._extract_places_regex(0, text, "")
         all_places.extend(regex_places)
-        logger.info(f"📊 正規表現抽出: {len(regex_places)}件")
-        
+        # MeCab抽出（利用可能な場合）
+        if hasattr(self, 'tagger') and self.tagger:
+            mecab_places = self._extract_places_mecab(0, text, "")
+            all_places.extend(mecab_places)
         # 重複除去とマージ
         unique_places = self._deduplicate_and_merge(all_places)
-        
         logger.info(f"✅ 高精度地名抽出完了: {len(unique_places)}件")
         return unique_places
     
@@ -239,7 +233,7 @@ class AdvancedPlaceExtractor:
         """抽出機能のテスト"""
         logger.info("🧪 Advanced Place Extractor テスト開始")
         
-        places = self.extract_places_combined(999, test_text)
+        places = self.extract_places(test_text)
         
         # 統計作成
         methods = {}
